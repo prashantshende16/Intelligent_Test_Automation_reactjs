@@ -31,7 +31,9 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   // Destructure props BEFORE any useEffect that references these variables
   const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, agent_states = [] } = taskDetails || {};
   const selectedAgent = agent_states.find(state => state.id === selectedAgentId);
+  const selectedError = errors.find(err => err.id === selectedErrorId) || errors[0] || null;
   const agentWarningCount = agent_states.reduce((count, state) => count + (state.errors_found || 0), 0);
+  const orchestratorAgent = agent_states.find(state => state.agent_name === 'Orchestrator');
 
   // Scroll code review into view when a new error is selected and set default selected error
   useEffect(() => {
@@ -41,7 +43,10 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
     if (errors && errors.length > 0 && selectedErrorId === null) {
       setSelectedErrorId(errors[0].id);
     }
-  }, [selectedErrorId, errors]);
+    if (task.status === 'failed' && orchestratorAgent && selectedAgentId !== orchestratorAgent.id) {
+      setSelectedAgentId(orchestratorAgent.id);
+    }
+  }, [selectedErrorId, errors, task.status, orchestratorAgent, selectedAgentId]);
   if (isDetailsLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -118,6 +123,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
           <div>
             <span style={styles.domainSub}>TEST DIAGNOSTICS FOR</span>
             <h2 style={styles.title}>{task.url}</h2>
+            {task.status === 'failed' && orchestratorAgent?.log_output && (
+              <div style={styles.failureBanner}>
+                <AlertTriangle size={14} color="var(--error)" />
+                <span>{orchestratorAgent.log_output.split('\n').filter(Boolean).slice(-1)[0]}</span>
+              </div>
+            )}
             {codebase && (
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>
                 Codebase Path: {codebase.local_path} ({codebase.framework_type})
@@ -356,6 +367,8 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                 {/* Left Column: Errors list */}
                 <div style={styles.errorsListCol}>
                   {errors.map(err => {
+                    const relatedTest = test_cases.find(test => test.id === err.test_case_id);
+                    const failureSummary = err.message.includes('.') ? err.message.split('.').slice(0, 1).join('.').trim() : err.message;
                     return (
                       <button
                         key={err.id}
@@ -370,11 +383,11 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                           textAlign: 'left'
                         }}
                         type="button"
-                      >
+                        >
                         <div style={styles.errorHeader}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <XCircle size={16} color="var(--error)" />
-                            <span style={styles.errorHeadline}>{err.message.split('!')[0]}</span>
+                            <span style={styles.errorHeadline}>{failureSummary}</span>
                           </div>
                           <span className={`severity-badge severity-${err.severity}`} style={{ fontSize: '0.6rem', padding: '2px 6px' }}>
                             {err.severity}
@@ -382,7 +395,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                         </div>
                         
                         <p style={styles.errorDescCompact}>
-                          {err.message.includes('!') ? err.message.substring(err.message.indexOf('!') + 1).trim() : err.message}
+                          {relatedTest ? relatedTest.title : err.message}
                         </p>
                         
                         <div style={styles.errorUrlText}>URL: {err.page_url}</div>
@@ -394,14 +407,48 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                 {/* Right Column: Mapped Code & Fix */}
                 <div className="glass-panel" style={styles.codeReviewCol} ref={codeReviewRef}>
                   {(() => {
-                    const activeErr = errors.find(e => e.id === selectedErrorId) || errors[0];
+                    const activeErr = selectedError;
                     if (!activeErr) return null;
                     
                     const ref = activeErr.code_reference;
                     const screenshotUrl = getScreenshotUrl(activeErr.screenshot_path);
+                    const activeTest = test_cases.find(test => test.id === activeErr.test_case_id);
                     if (!ref) {
                       return (
                         <div style={styles.noCodeRefBox}>
+                          <div style={styles.failureDetailBox}>
+                            <div style={styles.codeBlockHeader}>Failure Details</div>
+                            <div style={styles.failureDetailGrid}>
+                              <div>
+                                <div style={styles.failureLabel}>Reason</div>
+                                <div style={styles.failureValue}>{activeErr.message}</div>
+                              </div>
+                              <div>
+                                <div style={styles.failureLabel}>Severity</div>
+                                <div style={styles.failureValue}>{activeErr.severity}</div>
+                              </div>
+                              <div>
+                                <div style={styles.failureLabel}>Page URL</div>
+                                <div style={styles.failureValue}>{activeErr.page_url}</div>
+                              </div>
+                              {activeTest && (
+                                <>
+                                  <div>
+                                    <div style={styles.failureLabel}>Test Title</div>
+                                    <div style={styles.failureValue}>{activeTest.title}</div>
+                                  </div>
+                                  <div>
+                                    <div style={styles.failureLabel}>Expected Result</div>
+                                    <div style={styles.failureValue}>{activeTest.expected_result || 'Not provided'}</div>
+                                  </div>
+                                  <div>
+                                    <div style={styles.failureLabel}>Steps</div>
+                                    <div style={styles.failureValue}>{activeTest.steps || 'Not provided'}</div>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
                           {screenshotUrl && (
                             <div style={styles.screenshotBlock}>
                               <div style={styles.codeBlockHeader}>Failure Screenshot</div>
@@ -507,6 +554,19 @@ const styles = {
   },
   header: {
     padding: '24px',
+  },
+  failureBanner: {
+    marginTop: '10px',
+    padding: '10px 12px',
+    borderRadius: '10px',
+    background: 'rgba(239, 68, 68, 0.08)',
+    border: '1px solid rgba(239, 68, 68, 0.22)',
+    color: '#fecaca',
+    fontSize: '0.82rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    lineHeight: '1.4',
   },
   headerTitleRow: {
     display: 'flex',
@@ -734,6 +794,32 @@ const styles = {
     color: '#fca5a5',
     fontSize: '0.85rem',
     lineHeight: '1.4',
+  },
+  failureDetailBox: {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginBottom: '16px',
+  },
+  failureDetailGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '12px',
+  },
+  failureLabel: {
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: 'var(--text-dim)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '4px',
+  },
+  failureValue: {
+    fontSize: '0.85rem',
+    color: 'var(--text-main)',
+    lineHeight: '1.5',
+    wordBreak: 'break-word',
   },
   noDataBox: {
     display: 'flex',
