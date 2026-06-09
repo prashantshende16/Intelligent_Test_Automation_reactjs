@@ -3,7 +3,14 @@ import { Globe, Sparkles, X, Terminal, CheckCircle2, FolderOpen } from 'lucide-r
 
 export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmitting }) {
   const [url, setUrl] = useState('');
+  const [seedUrls, setSeedUrls] = useState('');
   const [codebasePath, setCodebasePath] = useState('');
+  const [authRequired, setAuthRequired] = useState(false);
+  const [authLoginUrl, setAuthLoginUrl] = useState('');
+  const [authUsername, setAuthUsername] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authOtpCode, setAuthOtpCode] = useState('');
+  const [authOtpHint, setAuthOtpHint] = useState('');
   const [urlError, setUrlError] = useState('');
   const [codeError, setCodeError] = useState('');
   const [error, setError] = useState('');
@@ -43,9 +50,27 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       setCodeError('Please provide a valid codebase folder path or leave empty.');
       return;
     }
-    onSubmit(targetUrls, codebasePath.trim());
+    onSubmit(targetUrls, codebasePath.trim(), {
+      seed_urls: seedUrls
+        .split(/[\n,]+/)
+        .map(value => value.trim())
+        .filter(Boolean),
+      auth_required: authRequired,
+      auth_login_url: authLoginUrl.trim(),
+      auth_username: authUsername.trim(),
+      auth_password: authPassword,
+      auth_otp_code: authOtpCode.trim(),
+      auth_otp_hint: authOtpHint.trim(),
+    });
     setUrl('');
+    setSeedUrls('');
     setCodebasePath('');
+    setAuthRequired(false);
+    setAuthLoginUrl('');
+    setAuthUsername('');
+    setAuthPassword('');
+    setAuthOtpCode('');
+    setAuthOtpHint('');
   };
 
   return (
@@ -107,6 +132,81 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
             </div>
             {codeError && <div style={styles.errorText}>{codeError}</div>}
             {error && <div style={styles.errorText}>{error}</div>}
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.label}>Seed URLs for Known Pages</label>
+            <div style={styles.fieldRow}>
+              <div style={styles.iconBox}>
+                <Globe size={18} color="var(--primary)" />
+              </div>
+              <textarea
+                rows={3}
+                placeholder={'e.g. https://ams.aahoa.com/become-a-member\nhttps://ams.aahoa.com/become-a-vendor'}
+                value={seedUrls}
+                onChange={(e) => setSeedUrls(e.target.value)}
+                disabled={isSubmitting}
+                style={styles.textarea}
+              />
+            </div>
+            <div style={styles.helpText}>Optional. Add pages that should be tested even if the homepage crawl does not expose them.</div>
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.label}>Authentication / Session</label>
+            <label style={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={authRequired}
+                onChange={(e) => setAuthRequired(e.target.checked)}
+              />
+              <span>This website needs login or session access</span>
+            </label>
+
+            {authRequired && (
+              <div style={styles.authGrid}>
+                <input
+                  type="text"
+                  placeholder="Login page URL (optional)"
+                  value={authLoginUrl}
+                  onChange={(e) => setAuthLoginUrl(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+                <input
+                  type="text"
+                  placeholder="Username / email"
+                  value={authUsername}
+                  onChange={(e) => setAuthUsername(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+                <input
+                  type="text"
+                  placeholder="OTP code if already available"
+                  value={authOtpCode}
+                  onChange={(e) => setAuthOtpCode(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+                <input
+                  type="text"
+                  placeholder="OTP hint / description"
+                  value={authOtpHint}
+                  onChange={(e) => setAuthOtpHint(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+              </div>
+            )}
           </div>
 
           {/* Explanation checklist */}
@@ -234,6 +334,19 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
+  },
+  checkboxRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    color: 'var(--text-muted)',
+    fontSize: '0.85rem',
+  },
+  authGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '10px',
+    marginTop: '6px',
   },
   label: {
     fontSize: '0.75rem',

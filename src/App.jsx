@@ -124,7 +124,7 @@ export default function App() {
     }
   };
 
-  const handleCreateTask = async (urls, codebasePath) => {
+  const handleCreateTask = async (urls, codebasePath, taskConfig = {}) => {
     setIsSubmitting(true);
     try {
       const targetUrls = Array.isArray(urls) ? urls : [urls];
@@ -135,7 +135,7 @@ export default function App() {
         const res = await fetch(`${API_BASE}/tasks`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, codebase_path: codebasePath }),
+          body: JSON.stringify({ url, codebase_path: codebasePath, ...taskConfig }),
         });
 
         if (res.ok) {

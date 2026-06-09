@@ -29,11 +29,20 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const codeReviewRef = useRef(null);
 
   // Destructure props BEFORE any useEffect that references these variables
-  const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, agent_states = [] } = taskDetails || {};
+  const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, auth, seeds, agent_states = [] } = taskDetails || {};
   const selectedAgent = agent_states.find(state => state.id === selectedAgentId);
   const selectedError = errors.find(err => err.id === selectedErrorId) || errors[0] || null;
   const agentWarningCount = agent_states.reduce((count, state) => count + (state.errors_found || 0), 0);
   const orchestratorAgent = agent_states.find(state => state.agent_name === 'Orchestrator');
+  const discoveredPages = Array.from(
+    new Set(
+      test_cases
+        .map(test => test.page_url)
+        .filter(Boolean)
+    )
+  );
+  const seededPages = seeds?.seed_urls_json ? JSON.parse(seeds.seed_urls_json) : [];
+  const discoveredOnlyPages = discoveredPages.filter(pageUrl => !seededPages.includes(pageUrl));
 
   // Scroll code review into view when a new error is selected and set default selected error
   useEffect(() => {
@@ -127,6 +136,44 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
               <div style={styles.failureBanner}>
                 <AlertTriangle size={14} color="var(--error)" />
                 <span>{orchestratorAgent.log_output.split('\n').filter(Boolean).slice(-1)[0]}</span>
+              </div>
+            )}
+            {(discoveredOnlyPages.length > 0 || seededPages.length > 0) && (
+              <div style={styles.pageProvenanceGrid}>
+                {discoveredOnlyPages.length > 0 && (
+                  <div style={styles.seedPanel}>
+                    <span style={styles.pagePreviewLabel}>Discovered by crawl</span>
+                    <div style={styles.pagePreviewList}>
+                      {discoveredOnlyPages.slice(0, 8).map(pageUrl => (
+                        <span key={pageUrl} style={styles.pagePreviewChip} title={pageUrl}>
+                          {pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {seededPages.length > 0 && (
+                  <div style={styles.seedPanel}>
+                    <span style={styles.pagePreviewLabel}>Seeded manually</span>
+                    <div style={styles.pagePreviewList}>
+                      {seededPages.slice(0, 8).map(seedUrl => (
+                        <span key={seedUrl} style={styles.pagePreviewChip} title={seedUrl}>
+                          {seedUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {auth?.auth_required && (
+              <div style={styles.seedPanel}>
+                <span style={styles.pagePreviewLabel}>Auth session</span>
+                <div style={styles.authSummary}>
+                  <span>{auth.auth_login_url || 'Using start URL session'}</span>
+                  <span>{auth.auth_username ? `User: ${auth.auth_username}` : 'No username stored'}</span>
+                  <span>{auth.auth_otp_hint ? `OTP: ${auth.auth_otp_hint}` : 'No OTP hint stored'}</span>
+                </div>
               </div>
             )}
             {codebase && (
@@ -567,6 +614,55 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     lineHeight: '1.4',
+  },
+  pagePreviewStrip: {
+    marginTop: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  pagePreviewLabel: {
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: 'var(--text-dim)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+  },
+  pagePreviewList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  seedPanel: {
+    marginTop: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  pageProvenanceGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '10px',
+    marginTop: '10px',
+  },
+  authSummary: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    color: 'var(--text-muted)',
+    fontSize: '0.78rem',
+  },
+  pagePreviewChip: {
+    padding: '6px 10px',
+    borderRadius: '999px',
+    background: 'rgba(255, 255, 255, 0.04)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    color: 'var(--text-muted)',
+    fontSize: '0.75rem',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   headerTitleRow: {
     display: 'flex',
