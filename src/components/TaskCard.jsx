@@ -1,5 +1,7 @@
 import React from 'react';
-import { Globe, Bug, ShieldCheck, HelpCircle, AlertTriangle, Lightbulb, Trash2, ArrowRight } from 'lucide-react';
+import { Globe, Bug, ShieldCheck, HelpCircle, AlertTriangle, Lightbulb, Trash2, ArrowRight, Download } from 'lucide-react';
+
+const API_BASE = 'http://localhost:8000/api';
 
 export default function TaskCard({ task, isSelected, onClick, onDelete }) {
   // Format Date
@@ -29,6 +31,10 @@ export default function TaskCard({ task, isSelected, onClick, onDelete }) {
   };
 
   const isRunning = ['crawling', 'generating_test_cases', 'running_tests'].includes(task.status);
+  const downloadCsv = (e) => {
+    e.stopPropagation();
+    window.open(`${API_BASE}/tasks/${task.id}/report.csv`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div
@@ -64,6 +70,13 @@ export default function TaskCard({ task, isSelected, onClick, onDelete }) {
           {formatStatus(task.status)}
         </span>
         <span style={styles.time}>{dateStr}</span>
+      </div>
+
+      <div style={styles.exportRow}>
+        <button type="button" onClick={downloadCsv} style={styles.csvBtn} title="Download CSV report">
+          <Download size={14} />
+          <span>Download CSV</span>
+        </button>
       </div>
 
       {/* Progress Bar for Active Tasks */}
@@ -162,6 +175,22 @@ const styles = {
   time: {
     fontSize: '0.75rem',
     color: 'var(--text-dim)',
+  },
+  exportRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  },
+  csvBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 10px',
+    borderRadius: '8px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    color: 'var(--text-main)',
+    fontSize: '0.78rem',
+    cursor: 'pointer',
   },
   progressContainer: {
     height: '4px',
