@@ -7,6 +7,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
   const [codebasePath, setCodebasePath] = useState('');
   const [authRequired, setAuthRequired] = useState(false);
   const [authLoginUrl, setAuthLoginUrl] = useState('');
+  const [authPostLoginUrl, setAuthPostLoginUrl] = useState('');
+  const [protectedUrls, setProtectedUrls] = useState('');
   const [authUsername, setAuthUsername] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authOtpCode, setAuthOtpCode] = useState('');
@@ -50,13 +52,20 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       setCodeError('Please provide a valid codebase folder path or leave empty.');
       return;
     }
+    const forcedProtectedUrls = protectedUrls
+      .split(/[\n,]+/)
+      .map(value => value.trim())
+      .filter(Boolean);
+
     onSubmit(targetUrls, codebasePath.trim(), {
       seed_urls: seedUrls
         .split(/[\n,]+/)
         .map(value => value.trim())
-        .filter(Boolean),
+        .filter(Boolean)
+        .concat(forcedProtectedUrls),
       auth_required: authRequired,
       auth_login_url: authLoginUrl.trim(),
+      auth_post_login_url: authPostLoginUrl.trim(),
       auth_username: authUsername.trim(),
       auth_password: authPassword,
       auth_otp_code: authOtpCode.trim(),
@@ -67,6 +76,8 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
     setCodebasePath('');
     setAuthRequired(false);
     setAuthLoginUrl('');
+    setAuthPostLoginUrl('');
+    setProtectedUrls('');
     setAuthUsername('');
     setAuthPassword('');
     setAuthOtpCode('');
@@ -172,6 +183,22 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
                   onChange={(e) => setAuthLoginUrl(e.target.value)}
                   disabled={isSubmitting}
                   style={styles.input}
+                />
+                <input
+                  type="text"
+                  placeholder="Post-login URL (e.g. https://scmt.datagrid.co.in/dashboard)"
+                  value={authPostLoginUrl}
+                  onChange={(e) => setAuthPostLoginUrl(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.input}
+                />
+                <textarea
+                  rows={3}
+                  placeholder={'Protected dashboard pages to force-test\nhttps://scmt.datagrid.co.in/dashboard\nhttps://scmt.datagrid.co.in/reports'}
+                  value={protectedUrls}
+                  onChange={(e) => setProtectedUrls(e.target.value)}
+                  disabled={isSubmitting}
+                  style={styles.authTextarea}
                 />
                 <input
                   type="text"
@@ -292,10 +319,13 @@ const styles = {
   modal: {
     width: '100%',
     maxWidth: '460px',
+    maxHeight: 'calc(100vh - 40px)',
     backgroundColor: '#0c0f1e',
     border: '1px solid rgba(255, 255, 255, 0.08)',
     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.1)',
     overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
   },
   header: {
     padding: '20px 24px',
@@ -329,6 +359,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
+    overflowY: 'auto',
+    minHeight: 0,
   },
   inputWrapper: {
     display: 'flex',
@@ -398,6 +430,20 @@ const styles = {
     resize: 'vertical',
     fontFamily: 'var(--font-body)',
   },
+  authTextarea: {
+    minHeight: '82px',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    color: 'var(--text-main)',
+    fontSize: '0.9rem',
+    lineHeight: '1.45',
+    outline: 'none',
+    width: '100%',
+    resize: 'vertical',
+    fontFamily: 'var(--font-body)',
+  },
   helpText: {
     fontSize: '0.7rem',
     color: 'var(--text-dim)',
@@ -442,7 +488,11 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: '12px',
-    marginTop: '8px',
+    marginTop: 'auto',
+    paddingTop: '8px',
+    position: 'sticky',
+    bottom: 0,
+    backgroundColor: '#0c0f1e',
   },
   buttonSpinner: {
     width: '14px',

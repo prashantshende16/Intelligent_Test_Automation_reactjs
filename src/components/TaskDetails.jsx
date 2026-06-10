@@ -20,6 +20,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const [activeTab, setActiveTab] = useState('test-cases');
   const [selectedErrorId, setSelectedErrorId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
+  const [resumeUsername, setResumeUsername] = useState('');
+  const [resumePassword, setResumePassword] = useState('');
+  const [resumeLoginUrl, setResumeLoginUrl] = useState('');
+  const [resumePostLoginUrl, setResumePostLoginUrl] = useState('');
+  const [resumeError, setResumeError] = useState('');
+  const [resumeLoading, setResumeLoading] = useState(false);
 
 
   
@@ -34,6 +40,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const selectedError = errors.find(err => err.id === selectedErrorId) || errors[0] || null;
   const agentWarningCount = agent_states.reduce((count, state) => count + (state.errors_found || 0), 0);
   const orchestratorAgent = agent_states.find(state => state.agent_name === 'Orchestrator');
+  const needsInput = task.status === 'needs_input' || (auth?.auth_required && (!auth.auth_username || !auth.auth_password));
   const discoveredPages = Array.from(
     new Set(
       test_cases
@@ -56,6 +63,15 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
       setSelectedAgentId(orchestratorAgent.id);
     }
   }, [selectedErrorId, errors, task.status, orchestratorAgent, selectedAgentId]);
+
+  useEffect(() => {
+    if (auth) {
+      setResumeUsername(auth.auth_username || '');
+      setResumePassword(auth.auth_password || '');
+      setResumeLoginUrl(auth.auth_login_url || '');
+      setResumePostLoginUrl(auth.auth_post_login_url || '');
+    }
+  }, [auth]);
   if (isDetailsLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -72,6 +88,40 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
 
   const toggleTestCase = (id) => {
     setExpandedTestCases(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleResumeWithAuth = async () => {
+    setResumeError('');
+    if (!task?.id) return;
+    if (!resumeUsername.trim() || !resumePassword.trim()) {
+      setResumeError('Username and password are required to resume the run.');
+      return;
+    }
+    setResumeLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${task.id}/input`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_required: true,
+          auth_login_url: resumeLoginUrl.trim(),
+          auth_post_login_url: resumePostLoginUrl.trim(),
+          auth_username: resumeUsername.trim(),
+          auth_password: resumePassword,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to save authentication details.');
+      }
+      const resumeRes = await fetch(`${API_BASE}/tasks/${task.id}/resume`, { method: 'POST' });
+      if (!resumeRes.ok) {
+        throw new Error('Failed to resume the task.');
+      }
+    } catch (err) {
+      setResumeError(err.message || 'Unable to resume task.');
+    } finally {
+      setResumeLoading(false);
+    }
   };
 
   const isRunning = ['crawling', 'generating_test_cases', 'running_tests', 'pending'].includes(task.status);
@@ -189,6 +239,53 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
       </div>
 
       {renderAgentStatus()}
+
+      {needsInput && (
+        <div className="glass-panel" style={styles.agentPanel}>
+          <h4 style={styles.agentPanelTitle}>
+            <Terminal size={14} color="var(--primary)" />
+            <span>Authentication required to continue</span>
+          </h4>
+          <div style={styles.resumeGrid}>
+            <input
+              type="text"
+              placeholder="Username / email"
+              value={resumeUsername}
+              onChange={(e) => setResumeUsername(e.target.value)}
+              style={styles.resumeInput}
+              disabled={resumeLoading}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={resumePassword}
+              onChange={(e) => setResumePassword(e.target.value)}
+              style={styles.resumeInput}
+              disabled={resumeLoading}
+            />
+            <input
+              type="text"
+              placeholder="Login page URL"
+              value={resumeLoginUrl}
+              onChange={(e) => setResumeLoginUrl(e.target.value)}
+              style={styles.resumeInput}
+              disabled={resumeLoading}
+            />
+            <input
+              type="text"
+              placeholder="Post-login URL"
+              value={resumePostLoginUrl}
+              onChange={(e) => setResumePostLoginUrl(e.target.value)}
+              style={styles.resumeInput}
+              disabled={resumeLoading}
+            />
+          </div>
+          {resumeError && <div style={styles.resumeError}>{resumeError}</div>}
+          <button type="button" className="btn-primary" onClick={handleResumeWithAuth} disabled={resumeLoading} style={{ marginTop: '12px' }}>
+            {resumeLoading ? 'Resuming...' : 'Save and Resume Testing'}
+          </button>
+        </div>
+      )}
 
       {/* Sub-Agent Monitoring Panel */}
       {agent_states.length > 0 && (
@@ -1263,5 +1360,26 @@ const styles = {
     lineHeight: '1.4',
     overflowX: 'auto',
     margin: 0,
+  },
+  resumeGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '10px',
+    marginTop: '10px',
+  },
+  resumeInput: {
+    width: '100%',
+    minHeight: '42px',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '10px',
+    padding: '0 14px',
+    color: 'var(--text-main)',
+    outline: 'none',
+  },
+  resumeError: {
+    marginTop: '10px',
+    color: 'var(--error)',
+    fontSize: '0.82rem',
   },
 };
