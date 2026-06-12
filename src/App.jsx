@@ -5,7 +5,7 @@ import TaskCard from './components/TaskCard';
 import TaskDetails from './components/TaskDetails';
 import CreateTaskModal from './components/CreateTaskModal';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -192,7 +192,7 @@ export default function App() {
             <Terminal size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={styles.brandTitle}>Antigravity QA</h1>
+            <h1 style={styles.brandTitle}>Datagrid QA</h1>
             <span style={styles.brandSub}>AI Agent Website Test Automation Suite</span>
           </div>
         </div>

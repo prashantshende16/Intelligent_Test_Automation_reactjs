@@ -22,10 +22,14 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const [selectedAgentId, setSelectedAgentId] = useState(null);
   const [resumeUsername, setResumeUsername] = useState('');
   const [resumePassword, setResumePassword] = useState('');
+  const [resumeOtpCode, setResumeOtpCode] = useState('');
   const [resumeLoginUrl, setResumeLoginUrl] = useState('');
   const [resumePostLoginUrl, setResumePostLoginUrl] = useState('');
   const [resumeError, setResumeError] = useState('');
   const [resumeLoading, setResumeLoading] = useState(false);
+  const identifierInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  const otpInputRef = useRef(null);
 
 
   
@@ -35,12 +39,70 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const codeReviewRef = useRef(null);
 
   // Destructure props BEFORE any useEffect that references these variables
-  const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, auth, seeds, agent_states = [] } = taskDetails || {};
+  const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, auth, auth_state, seeds, agent_states = [] } = taskDetails || {};
   const selectedAgent = agent_states.find(state => state.id === selectedAgentId);
   const selectedError = errors.find(err => err.id === selectedErrorId) || errors[0] || null;
   const agentWarningCount = agent_states.reduce((count, state) => count + (state.errors_found || 0), 0);
   const orchestratorAgent = agent_states.find(state => state.agent_name === 'Orchestrator');
-  const needsInput = task.status === 'needs_input' || (auth?.auth_required && (!auth.auth_username || !auth.auth_password));
+  const requiredAuthFields = (() => {
+    const rawFields = auth_state?.required_fields || auth?.auth_required_fields;
+    if (!rawFields) return [];
+    try {
+      const parsed = Array.isArray(rawFields) ? rawFields : JSON.parse(rawFields);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+  const missingAuthFields = requiredAuthFields.length > 0 ? requiredAuthFields : [];
+  const otpOnlyResume = missingAuthFields.length === 1 && missingAuthFields[0] === 'otp';
+  const normalizedAuthFields = Array.from(new Set(missingAuthFields.map(field => String(field || '').toLowerCase())));
+  const authFlowHint = auth_state?.flow || auth?.auth_flow || (() => {
+    const joined = normalizedAuthFields.join(' ');
+    if (joined.includes('mobile') && joined.includes('otp')) return 'mobile_otp';
+    if (joined.includes('email') && joined.includes('otp')) return 'email_otp';
+    if (joined.includes('password') && joined.includes('otp')) return 'password_reset';
+    if (normalizedAuthFields.includes('otp')) return 'otp';
+    if (normalizedAuthFields.includes('password')) return 'password';
+    if (normalizedAuthFields.some(field => ['mobile', 'email', 'username'].includes(field))) return 'identifier';
+    return 'general';
+  })();
+  const visibleResumeFields = (() => {
+    if (!normalizedAuthFields.length) {
+      return ['identifier', 'password', 'otp', 'loginUrl', 'postLoginUrl'];
+    }
+    const fields = [];
+    if (normalizedAuthFields.some(field => ['mobile', 'email', 'username'].includes(field))) fields.push('identifier');
+    if (normalizedAuthFields.includes('password')) fields.push('password');
+    if (normalizedAuthFields.includes('otp')) fields.push('otp');
+    if (normalizedAuthFields.includes('challenge')) fields.push('otp');
+    if (auth_state?.login_url || auth?.auth_login_url || auth?.auth_next_step) fields.push('loginUrl');
+    if (auth_state?.post_login_url || auth?.auth_post_login_url || auth?.auth_next_step) fields.push('postLoginUrl');
+    return Array.from(new Set(fields));
+  })();
+  const needsInput = task.status === 'needs_input' || Boolean(auth_state?.next_step || auth?.auth_next_step) || (auth_state?.required ?? auth?.auth_required ? (!auth_state?.username && !auth?.auth_username && !auth_state?.password_set && !auth?.auth_password) : false);
+  const authPrompt = auth_state?.next_step || auth?.auth_next_step || (requiredAuthFields.length ? `Please provide: ${requiredAuthFields.join(', ')}` : '');
+  const authHelperText = (() => {
+    if (authFlowHint === 'mobile_otp') {
+      return 'Enter the OTP or code sent to the mobile number on the account.';
+    }
+    if (authFlowHint === 'email_otp') {
+      return 'Enter the OTP or verification code sent to the email address.';
+    }
+    if (authFlowHint === 'password_reset') {
+      return 'Enter the new password and any verification code required to complete the reset.';
+    }
+    if (authFlowHint === 'otp') {
+      return 'Enter the OTP or security code sent by the website.';
+    }
+    if (authFlowHint === 'password') {
+      return 'Enter the password for the current account.';
+    }
+    if (authFlowHint === 'identifier') {
+      return 'Enter the login identifier the site expects.';
+    }
+    return 'Provide the missing authentication detail so testing can continue.';
+  })();
   const discoveredPages = Array.from(
     new Set(
       test_cases
@@ -66,12 +128,26 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
 
   useEffect(() => {
     if (auth) {
-      setResumeUsername(auth.auth_username || '');
-      setResumePassword(auth.auth_password || '');
-      setResumeLoginUrl(auth.auth_login_url || '');
-      setResumePostLoginUrl(auth.auth_post_login_url || '');
+      setResumeUsername(auth_state?.username || auth.auth_username || '');
+      setResumePassword(auth_state?.password_set ? (auth.auth_password || '') : '');
+      setResumeOtpCode(auth_state?.otp_set ? (auth.auth_otp_code || '') : '');
+      setResumeLoginUrl(auth_state?.login_url || auth.auth_login_url || '');
+      setResumePostLoginUrl(auth_state?.post_login_url || auth.auth_post_login_url || '');
     }
-  }, [auth]);
+  }, [auth, auth_state]);
+
+  useEffect(() => {
+    if (!needsInput) return;
+    const focusTarget =
+      (visibleResumeFields.includes('identifier') && identifierInputRef.current) ||
+      (visibleResumeFields.includes('password') && passwordInputRef.current) ||
+      (visibleResumeFields.includes('otp') && otpInputRef.current);
+    if (focusTarget && typeof focusTarget.focus === 'function') {
+      const timer = window.setTimeout(() => focusTarget.focus(), 50);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [needsInput, visibleResumeFields]);
   if (isDetailsLoading) {
     return (
       <div style={styles.loadingContainer}>
@@ -93,8 +169,16 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const handleResumeWithAuth = async () => {
     setResumeError('');
     if (!task?.id) return;
-    if (!resumeUsername.trim() || !resumePassword.trim()) {
-      setResumeError('Username and password are required to resume the run.');
+    if (!resumeUsername.trim() && normalizedAuthFields.some(field => ['mobile', 'email', 'username'].includes(field))) {
+      setResumeError('A login identifier is required to resume the run.');
+      return;
+    }
+    if (!resumePassword.trim() && normalizedAuthFields.includes('password')) {
+      setResumeError('Password is required to resume the run.');
+      return;
+    }
+    if (!resumeOtpCode.trim() && normalizedAuthFields.includes('otp')) {
+      setResumeError('OTP / security code is required to resume the run.');
       return;
     }
     setResumeLoading(true);
@@ -108,6 +192,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
           auth_post_login_url: resumePostLoginUrl.trim(),
           auth_username: resumeUsername.trim(),
           auth_password: resumePassword,
+          auth_otp_code: resumeOtpCode.trim(),
         }),
       });
       if (!res.ok) {
@@ -246,44 +331,80 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
             <Terminal size={14} color="var(--primary)" />
             <span>Authentication required to continue</span>
           </h4>
+          {authPrompt && <div style={styles.authPrompt}>{authPrompt}</div>}
+          <div style={styles.authHelper}>{authHelperText}</div>
           <div style={styles.resumeGrid}>
-            <input
-              type="text"
-              placeholder="Username / email"
-              value={resumeUsername}
-              onChange={(e) => setResumeUsername(e.target.value)}
-              style={styles.resumeInput}
-              disabled={resumeLoading}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={resumePassword}
-              onChange={(e) => setResumePassword(e.target.value)}
-              style={styles.resumeInput}
-              disabled={resumeLoading}
-            />
-            <input
-              type="text"
-              placeholder="Login page URL"
-              value={resumeLoginUrl}
-              onChange={(e) => setResumeLoginUrl(e.target.value)}
-              style={styles.resumeInput}
-              disabled={resumeLoading}
-            />
-            <input
-              type="text"
-              placeholder="Post-login URL"
-              value={resumePostLoginUrl}
-              onChange={(e) => setResumePostLoginUrl(e.target.value)}
-              style={styles.resumeInput}
-              disabled={resumeLoading}
-            />
+            {visibleResumeFields.includes('identifier') && (
+              <input
+                type="text"
+                placeholder="Username / email / mobile"
+                value={resumeUsername}
+                onChange={(e) => setResumeUsername(e.target.value)}
+                ref={identifierInputRef}
+                style={styles.resumeInput}
+                disabled={resumeLoading}
+              />
+            )}
+            {visibleResumeFields.includes('password') && (
+              <input
+                type="password"
+                placeholder="Password"
+                value={resumePassword}
+                onChange={(e) => setResumePassword(e.target.value)}
+                ref={passwordInputRef}
+                style={styles.resumeInput}
+                disabled={resumeLoading}
+              />
+            )}
+            {visibleResumeFields.includes('otp') && (
+              <input
+                type="text"
+                placeholder="OTP / security code"
+                value={resumeOtpCode}
+                onChange={(e) => setResumeOtpCode(e.target.value)}
+                ref={otpInputRef}
+                style={styles.resumeInput}
+                disabled={resumeLoading}
+              />
+            )}
+            {otpOnlyResume && (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleResumeWithAuth}
+                disabled={resumeLoading}
+                style={styles.otpQuickAction}
+              >
+                {resumeLoading ? 'Resuming...' : 'Resume with OTP'}
+              </button>
+            )}
+            {visibleResumeFields.includes('loginUrl') && (
+              <input
+                type="text"
+                placeholder="Login page URL"
+                value={resumeLoginUrl}
+                onChange={(e) => setResumeLoginUrl(e.target.value)}
+                style={styles.resumeInput}
+                disabled={resumeLoading}
+              />
+            )}
+            {visibleResumeFields.includes('postLoginUrl') && (
+              <input
+                type="text"
+                placeholder="Post-login URL"
+                value={resumePostLoginUrl}
+                onChange={(e) => setResumePostLoginUrl(e.target.value)}
+                style={styles.resumeInput}
+                disabled={resumeLoading}
+              />
+            )}
           </div>
           {resumeError && <div style={styles.resumeError}>{resumeError}</div>}
-          <button type="button" className="btn-primary" onClick={handleResumeWithAuth} disabled={resumeLoading} style={{ marginTop: '12px' }}>
-            {resumeLoading ? 'Resuming...' : 'Save and Resume Testing'}
-          </button>
+          {!otpOnlyResume && (
+            <button type="button" className="btn-primary" onClick={handleResumeWithAuth} disabled={resumeLoading} style={{ marginTop: '12px' }}>
+              {resumeLoading ? 'Resuming...' : 'Save and Resume Testing'}
+            </button>
+          )}
         </div>
       )}
 
@@ -1381,5 +1502,22 @@ const styles = {
     marginTop: '10px',
     color: 'var(--error)',
     fontSize: '0.82rem',
+  },
+  authPrompt: {
+    marginTop: '10px',
+    marginBottom: '6px',
+    color: 'var(--text-muted)',
+    fontSize: '0.9rem',
+    lineHeight: '1.45',
+  },
+  authHelper: {
+    marginBottom: '8px',
+    color: 'var(--text-dim)',
+    fontSize: '0.8rem',
+    lineHeight: '1.4',
+  },
+  otpQuickAction: {
+    gridColumn: '1 / -1',
+    marginTop: '2px',
   },
 };
