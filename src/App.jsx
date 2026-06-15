@@ -4,6 +4,8 @@ import StatsOverview from './components/StatsOverview';
 import TaskCard from './components/TaskCard';
 import TaskDetails from './components/TaskDetails';
 import CreateTaskModal from './components/CreateTaskModal';
+import LiveProcessMonitor from './components/LiveProcessMonitor';
+import PagesUnderTest from './components/PagesUnderTest';
 
 const API_BASE = '/api';
 
@@ -205,8 +207,14 @@ export default function App() {
         </button>
       </header>
 
+      {/* Live Process Monitor */}
+      <LiveProcessMonitor tasks={tasks} taskDetails={taskDetails} />
+
       {/* Global stats review */}
       <StatsOverview stats={stats} />
+
+      {/* Pages Under Test */}
+      <PagesUnderTest taskDetails={taskDetails} tasks={tasks} />
 
       {/* Main split dashboard view */}
       <div style={styles.layoutGrid}>

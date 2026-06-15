@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronUp, 
   HelpCircle, Lightbulb, Clock, Layers, Link as LinkIcon, Compass, Sparkles,
-  AlertTriangle, Activity, Terminal
+  AlertTriangle, Activity, Terminal, Download
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -14,6 +14,93 @@ function getScreenshotUrl(screenshotPath) {
   const taskId = parts[parts.length - 2];
   const filename = parts[parts.length - 1];
   return `${API_BASE}/screenshots/${encodeURIComponent(taskId)}/${encodeURIComponent(filename)}`;
+}
+
+// ── Dummy data map ──────────────────────────────────────────────────────────
+const DUMMY_MAP = {
+  first_name:'John', firstname:'John', fname:'John',
+  last_name:'Doe', lastname:'Doe', lname:'Doe', surname:'Doe',
+  name:'John Doe', full_name:'John Doe', fullname:'John Doe',
+  username:'johndoe_test', user:'johndoe_test',
+  email:'john.doe@testmail.com', mail:'john.doe@testmail.com',
+  phone:'+1-555-0100', mobile:'+1-555-0101', tel:'+1-555-0102',
+  password:'Test@Secure#2024', confirm_password:'Test@Secure#2024',
+  new_password:'NewPass@2024', old_password:'OldPass@2024',
+  address:'123 Test Street', street:'456 Demo Ave', city:'New York',
+  state:'NY', zip:'10001', zipcode:'10001', postal:'10001', country:'USA',
+  company:'Acme Corp', organization:'Test Org', website:'https://example.com',
+  date:'2024-06-15', dob:'1990-01-15', birthday:'1990-01-15', age:'30',
+  title:'Mr.', subject:'Test Inquiry', message:'Automated test message.',
+  description:'Sample description for testing.', comment:'QA test comment.',
+  amount:'100.00', price:'99.99', quantity:'1', search:'test query',
+};
+
+function getDummyValue(fieldName) {
+  if (!fieldName) return 'test_value';
+  const lower = fieldName.toLowerCase().replace(/[-\s]/g, '_');
+  if (DUMMY_MAP[lower]) return DUMMY_MAP[lower];
+  for (const [k, v] of Object.entries(DUMMY_MAP)) {
+    if (lower.includes(k)) return v;
+  }
+  if (lower.includes('email')) return 'john.doe@testmail.com';
+  if (lower.includes('pass'))  return 'Test@Secure#2024';
+  if (lower.includes('phone') || lower.includes('mobile')) return '+1-555-0100';
+  if (lower.includes('name'))  return 'John Doe';
+  if (lower.includes('date'))  return '2024-06-15';
+  if (lower.includes('url') || lower.includes('link')) return 'https://example.com';
+  return `demo_${lower}`;
+}
+
+function extractFormFields(test) {
+  const combined = (test.steps || '') + ' ' + (test.error_message || '');
+  const fieldSet = new Set();
+
+  // List after "fields:" keyword
+  const colonList = combined.match(/(?:fields?|inputs?)[\s:]+([^.\n]+)/gi);
+  if (colonList) {
+    colonList.forEach(function(m) {
+      m.replace(/^(?:fields?|inputs?)[\s:]+/i, '').split(/[,;]/).forEach(function(f) {
+        const c = f.trim().replace(/["']/g, '');
+        if (c && c.length > 1 && c.length < 50) fieldSet.add(c);
+      });
+    });
+  }
+
+  // "fill 'field_name'" pattern
+  const fillRe = /fill(?:ing|ed)?\s+(?:field\s+)?["']?([\w_-]+)["']?/gi;
+  let fm;
+  while ((fm = fillRe.exec(combined)) !== null) fieldSet.add(fm[1].trim());
+
+  // snake_case / kebab-case tokens in error message
+  const tokenRe = /\b([a-z][a-z0-9]*(?:[_-][a-z0-9]+)+)\b/gi;
+  let tm;
+  while ((tm = tokenRe.exec(test.error_message || '')) !== null) {
+    const v = tm[1];
+    if (v.length > 3 && v.length < 40 && !['http','https','null','true','false'].includes(v.toLowerCase()))
+      fieldSet.add(v);
+  }
+
+  // Capitalised words after colon in error (e.g. "John, Doe")
+  const capRe = /:\s*([A-Z][a-z]+(?:,\s*[A-Z][a-z]+)*)/g;
+  let cm;
+  while ((cm = capRe.exec(test.error_message || '')) !== null) {
+    cm[1].split(',').forEach(function(w) {
+      const c = w.trim();
+      if (c.length > 1) fieldSet.add(c);
+    });
+  }
+
+  return Array.from(fieldSet)
+    .filter(function(f) { return f && f.length > 1 && !/^\d+$/.test(f); })
+    .slice(0, 15)
+    .map(function(f) { return { field: f, value: getDummyValue(f) }; });
+}
+
+// Find screenshot URL from errors linked to a test case
+function findTestScreenshot(testId, errors) {
+  if (!testId || !errors) return null;
+  const linked = errors.find(e => e.test_case_id === testId && e.screenshot_path);
+  return linked ? getScreenshotUrl(linked.screenshot_path) : null;
 }
 
 export default function TaskDetails({ taskDetails, isDetailsLoading }) {
@@ -317,9 +404,22 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
               </div>
             )}
           </div>
-          <span className={`status-badge status-${task.status || 'unknown'}`}>
-            {(task.status || 'unknown').replace(/_/g, ' ')}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <span className={`status-badge status-${task.status || 'unknown'}`}>
+              {(task.status || 'unknown').replace(/_/g, ' ')}
+            </span>
+            {task.id && (
+              <a
+                href={`${API_BASE}/tasks/${task.id}/report.csv`}
+                download
+                style={styles.csvDownloadBtn}
+                title="Download full CSV report"
+              >
+                <Download size={13} />
+                CSV
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
@@ -596,6 +696,70 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                                       <div style={styles.errorContent}>{test.error_message}</div>
                                     </div>
                                   )}
+
+                                  {/* Dummy Data Used */}
+                                  {(() => {
+                                    const fields = extractFormFields(test);
+                                    if (!fields.length) return null;
+                                    return (
+                                      <div style={styles.dummyDataBox}>
+                                        <div style={styles.dummyDataLabel}>
+                                          📋 Dummy Data Used in This Test
+                                        </div>
+                                        <div style={styles.dummyDataTable}>
+                                          <div style={styles.dummyDataHeaderRow}>
+                                            <span style={styles.dummyCol1}>Field Name</span>
+                                            <span style={styles.dummyCol2}>Dummy Value Used</span>
+                                            <span style={styles.dummyCol3}>Type Hint</span>
+                                          </div>
+                                          {fields.map(({ field, value }) => {
+                                            const lower = field.toLowerCase();
+                                            const typeHint =
+                                              lower.includes('email') ? 'Email' :
+                                              lower.includes('pass') ? 'Password' :
+                                              lower.includes('phone') || lower.includes('mobile') ? 'Phone' :
+                                              lower.includes('name') ? 'Name' :
+                                              lower.includes('date') || lower.includes('dob') ? 'Date' :
+                                              lower.includes('address') || lower.includes('city') || lower.includes('zip') ? 'Address' :
+                                              lower.includes('url') || lower.includes('website') ? 'URL' :
+                                              'Text';
+                                            return (
+                                              <div key={field} style={styles.dummyDataRow}>
+                                                <span style={styles.dummyCol1}>
+                                                  <code style={styles.dummyFieldCode}>{field}</code>
+                                                </span>
+                                                <span style={styles.dummyCol2}>
+                                                  <span style={styles.dummyValue}>{value}</span>
+                                                </span>
+                                                <span style={styles.dummyCol3}>
+                                                  <span style={styles.dummyTypeBadge}>{typeHint}</span>
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {/* Test Case Screenshot */}
+                                  {(() => {
+                                    const shotUrl = findTestScreenshot(test.id, errors);
+                                    if (!shotUrl) return null;
+                                    return (
+                                      <div style={styles.testScreenshotBox}>
+                                        <div style={styles.dummyDataLabel}>
+                                          📸 Test Execution Screenshot
+                                        </div>
+                                        <img
+                                          src={shotUrl}
+                                          alt={`Screenshot for ${test.title}`}
+                                          style={styles.testScreenshotImg}
+                                          onError={e => { e.target.style.display = 'none'; }}
+                                        />
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </div>
@@ -816,6 +980,21 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
+  },
+  csvDownloadBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: '#6366f1',
+    background: 'rgba(99,102,241,0.1)',
+    border: '1px solid rgba(99,102,241,0.3)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'opacity 0.2s',
   },
   header: {
     padding: '24px',
@@ -1519,5 +1698,106 @@ const styles = {
   otpQuickAction: {
     gridColumn: '1 / -1',
     marginTop: '2px',
+  },
+
+  // ── Dummy Data Table ───────────────────────────────────────────────────────
+  dummyDataBox: {
+    backgroundColor: 'rgba(99, 102, 241, 0.04)',
+    border: '1px solid rgba(99, 102, 241, 0.18)',
+    borderRadius: '10px',
+    padding: '14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+  dummyDataLabel: {
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    color: '#a5b4fc',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  },
+  dummyDataTable: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    borderRadius: '6px',
+    overflow: 'hidden',
+    border: '1px solid rgba(255,255,255,0.04)',
+  },
+  dummyDataHeaderRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1.4fr 0.6fr',
+    gap: '8px',
+    padding: '6px 10px',
+    backgroundColor: 'rgba(99,102,241,0.1)',
+    fontSize: '0.65rem',
+    fontWeight: '700',
+    color: '#a5b4fc',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  },
+  dummyDataRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1.4fr 0.6fr',
+    gap: '8px',
+    padding: '6px 10px',
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    alignItems: 'center',
+    borderTop: '1px solid rgba(255,255,255,0.02)',
+  },
+  dummyCol1: { display: 'flex', alignItems: 'center', minWidth: 0 },
+  dummyCol2: { display: 'flex', alignItems: 'center', minWidth: 0 },
+  dummyCol3: { display: 'flex', alignItems: 'center' },
+  dummyFieldCode: {
+    fontSize: '0.72rem',
+    fontFamily: 'monospace',
+    color: '#93c5fd',
+    background: 'rgba(59,130,246,0.1)',
+    padding: '1px 5px',
+    borderRadius: '3px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%',
+  },
+  dummyValue: {
+    fontSize: '0.78rem',
+    color: '#a5f3fc',
+    fontFamily: 'monospace',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: '100%',
+  },
+  dummyTypeBadge: {
+    fontSize: '0.62rem',
+    fontWeight: '700',
+    color: '#c4b5fd',
+    background: 'rgba(167,139,250,0.12)',
+    border: '1px solid rgba(167,139,250,0.2)',
+    padding: '1px 6px',
+    borderRadius: '4px',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+  },
+
+  // ── Test Screenshot ────────────────────────────────────────────────────────
+  testScreenshotBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '10px',
+    padding: '12px',
+  },
+  testScreenshotImg: {
+    width: '100%',
+    maxHeight: '320px',
+    objectFit: 'contain',
+    backgroundColor: '#060912',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: '6px',
   },
 };

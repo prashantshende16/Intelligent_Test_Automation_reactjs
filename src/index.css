@@ -130,6 +130,16 @@ body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .animate-fade-in {
   animation: fade-in 0.4s ease-out forwards;
 }
