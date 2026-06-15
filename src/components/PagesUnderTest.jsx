@@ -45,22 +45,22 @@ function downloadPageCSV(keyword, pageUrl, pageTests, pageErrors, pageUseCases, 
   rows.push(['URL', pageUrl]);
   rows.push([]);
   rows.push(['USE CASES']);
-  rows.push(['Title', 'Description']);
+  rows.push(['USE CASE TITLE', 'DESCRIPTION']);
   pageUseCases.forEach(uc => rows.push([uc.title, uc.description || '']));
   rows.push([]);
   rows.push(['TEST CASES']);
-  rows.push(['Title', 'Status', 'Expected Result', 'Error Message', 'Steps', 'Execution Time (s)']);
+  rows.push(['TITLE', 'STATUS', 'EXPECTED RESULT', 'ERROR MESSAGE', 'STEPS', 'EXECUTION TIME (S)']);
   pageTests.forEach(tc => rows.push([
     tc.title, tc.status, tc.expected_result || '', tc.error_message || '', tc.steps || '',
     tc.execution_time != null ? tc.execution_time : '',
   ]));
   rows.push([]);
   rows.push(['ERRORS']);
-  rows.push(['Message', 'Severity', 'Page URL', 'Created At']);
+  rows.push(['MESSAGE', 'SEVERITY', 'PAGE URL', 'CREATED AT']);
   pageErrors.forEach(e => rows.push([e.message, e.severity, e.page_url, e.created_at]));
   rows.push([]);
   rows.push(['SUGGESTIONS']);
-  rows.push(['Title', 'Priority', 'Description']);
+  rows.push(['TITLE', 'PRIORITY', 'DESCRIPTION']);
   pageSuggestions.forEach(s => rows.push([s.title, s.priority, s.description || '']));
 
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
