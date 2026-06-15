@@ -405,6 +405,11 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            {task.is_mobile && (
+              <span className="status-badge" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                Viewport Emulation: Mobile WebView
+              </span>
+            )}
             <span className={`status-badge status-${task.status || 'unknown'}`}>
               {(task.status || 'unknown').replace(/_/g, ' ')}
             </span>

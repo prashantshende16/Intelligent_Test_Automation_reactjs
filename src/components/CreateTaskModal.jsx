@@ -5,6 +5,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
   const [url, setUrl] = useState('');
   const [seedUrls, setSeedUrls] = useState('');
   const [codebasePath, setCodebasePath] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
   const [authLoginUrl, setAuthLoginUrl] = useState('');
   const [authPostLoginUrl, setAuthPostLoginUrl] = useState('');
@@ -16,6 +17,16 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
   const [urlError, setUrlError] = useState('');
   const [codeError, setCodeError] = useState('');
   const [error, setError] = useState('');
+
+  // Auto-check mobile webview viewport if target URL or codebase belongs to the mobile webview project
+  React.useEffect(() => {
+    if (
+      url.includes('192.168.10.125:3000') ||
+      codebasePath.toLowerCase().includes('ahoa')
+    ) {
+      setIsMobile(true);
+    }
+  }, [url, codebasePath]);
 
   if (!isOpen) return null;
 
@@ -58,6 +69,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       .filter(Boolean);
 
     onSubmit(targetUrls, codebasePath.trim(), {
+      is_mobile: isMobile,
       seed_urls: seedUrls
         .split(/[\n,]+/)
         .map(value => value.trim())
@@ -74,6 +86,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
     setUrl('');
     setSeedUrls('');
     setCodebasePath('');
+    setIsMobile(false);
     setAuthRequired(false);
     setAuthLoginUrl('');
     setAuthPostLoginUrl('');
@@ -161,6 +174,19 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
               />
             </div>
             <div style={styles.helpText}>Optional. Add pages that should be tested even if the homepage crawl does not expose them.</div>
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={isMobile}
+                onChange={(e) => setIsMobile(e.target.checked)}
+                disabled={isSubmitting}
+              />
+              <span style={{ fontWeight: '600' }}>Emulate Mobile WebView / Viewport</span>
+            </label>
+            <div style={styles.helpText}>Enable if the site is designed exclusively for mobile/webview screens (prevents blank pages).</div>
           </div>
 
           <div style={styles.inputWrapper}>
