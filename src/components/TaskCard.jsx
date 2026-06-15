@@ -1,9 +1,9 @@
 import React from 'react';
-import { Globe, Bug, ShieldCheck, HelpCircle, AlertTriangle, Lightbulb, Trash2, ArrowRight, Download } from 'lucide-react';
+import { Globe, Bug, ShieldCheck, HelpCircle, AlertTriangle, Lightbulb, Trash2, ArrowRight, Download, Square } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
 
-export default function TaskCard({ task, isSelected, onClick, onDelete }) {
+export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }) {
   // Format Date
   const dateStr = new Date(task.created_at).toLocaleDateString(undefined, {
     month: 'short',
@@ -30,7 +30,7 @@ export default function TaskCard({ task, isSelected, onClick, onDelete }) {
     return status.replace(/_/g, ' ');
   };
 
-  const isRunning = ['crawling', 'generating_test_cases', 'running_tests'].includes(task.status);
+  const isRunning = ['pending', 'crawling', 'generating_test_cases', 'running_tests'].includes(task.status);
   const downloadCsv = (e) => {
     e.stopPropagation();
     window.open(`${API_BASE}/tasks/${task.id}/report.csv`, '_blank', 'noopener,noreferrer');
@@ -73,10 +73,27 @@ export default function TaskCard({ task, isSelected, onClick, onDelete }) {
       </div>
 
       <div style={styles.exportRow}>
-        <button type="button" onClick={downloadCsv} style={styles.csvBtn} title="Download CSV report">
-          <Download size={14} />
-          <span>Download CSV</span>
-        </button>
+        {isRunning ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm(`Are you sure you want to stop the active test run for ${task.url}?`)) {
+                onStop(task.id);
+              }
+            }}
+            style={styles.stopBtn}
+            title="Stop/Cancel active test run"
+          >
+            <Square size={13} fill="currentColor" />
+            <span>Stop Run</span>
+          </button>
+        ) : (
+          <button type="button" onClick={downloadCsv} style={styles.csvBtn} title="Download CSV report">
+            <Download size={14} />
+            <span>Download CSV</span>
+          </button>
+        )}
       </div>
 
       {/* Progress Bar for Active Tasks */}
@@ -191,6 +208,20 @@ const styles = {
     color: 'var(--text-main)',
     fontSize: '0.78rem',
     cursor: 'pointer',
+  },
+  stopBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 10px',
+    borderRadius: '8px',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    background: 'rgba(239, 68, 68, 0.08)',
+    color: '#ef4444',
+    fontSize: '0.78rem',
+    cursor: 'pointer',
+    fontWeight: '600',
+    transition: 'background 0.2s',
   },
   progressContainer: {
     height: '4px',

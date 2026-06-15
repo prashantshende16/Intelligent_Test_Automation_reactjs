@@ -185,6 +185,26 @@ export default function App() {
     }
   };
 
+  const handleStopTask = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}/stop`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        await fetchTasks(false);
+        fetchStats();
+        if (selectedTaskId === id) {
+          fetchDetails(id, false);
+        }
+      } else {
+        const errData = await res.json();
+        alert(`Error: ${errData.detail || 'Failed to stop task'}`);
+      }
+    } catch (err) {
+      console.error('Error stopping task:', err);
+    }
+  };
+
   return (
     <div style={styles.appContainer}>
       {/* Header bar */}
@@ -249,6 +269,7 @@ export default function App() {
                   isSelected={task.id === selectedTaskId}
                   onClick={() => setSelectedTaskId(task.id)}
                   onDelete={handleDeleteTask}
+                  onStop={handleStopTask}
                 />
               ))
             )}
@@ -260,6 +281,10 @@ export default function App() {
           <TaskDetails 
             taskDetails={taskDetails} 
             isDetailsLoading={isDetailsLoading}
+            onRefreshDetails={() => {
+              fetchDetails(selectedTaskId, false);
+              fetchTasks(false);
+            }}
           />
         </main>
       </div>

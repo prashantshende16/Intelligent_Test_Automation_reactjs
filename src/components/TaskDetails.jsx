@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronUp, 
   HelpCircle, Lightbulb, Clock, Layers, Link as LinkIcon, Compass, Sparkles,
-  AlertTriangle, Activity, Terminal, Download
+  AlertTriangle, Activity, Terminal, Download, Square
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -103,7 +103,7 @@ function findTestScreenshot(testId, errors) {
   return linked ? getScreenshotUrl(linked.screenshot_path) : null;
 }
 
-export default function TaskDetails({ taskDetails, isDetailsLoading }) {
+export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails }) {
   const [activeTab, setActiveTab] = useState('test-cases');
   const [selectedErrorId, setSelectedErrorId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
@@ -114,6 +114,26 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
   const [resumePostLoginUrl, setResumePostLoginUrl] = useState('');
   const [resumeError, setResumeError] = useState('');
   const [resumeLoading, setResumeLoading] = useState(false);
+  const [stopLoading, setStopLoading] = useState(false);
+
+  const handleStop = async () => {
+    if (!task?.id) return;
+    setStopLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${task.id}/stop`, { method: 'POST' });
+      if (!res.ok) {
+        throw new Error('Failed to stop task.');
+      }
+      if (typeof onRefreshDetails === 'function') {
+        onRefreshDetails();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error stopping task: ' + err.message);
+    } finally {
+      setStopLoading(false);
+    }
+  };
   const identifierInputRef = useRef(null);
   const passwordInputRef = useRef(null);
   const otpInputRef = useRef(null);
@@ -360,6 +380,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
                 <span>{orchestratorAgent.log_output.split('\n').filter(Boolean).slice(-1)[0]}</span>
               </div>
             )}
+            {task.status === 'stopped' && (
+              <div style={{ ...styles.failureBanner, background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.25)', color: '#fbbf24' }}>
+                <AlertTriangle size={14} color="#fbbf24" />
+                <span>Task run was cancelled/stopped by user.</span>
+              </div>
+            )}
             {(discoveredOnlyPages.length > 0 || seededPages.length > 0) && (
               <div style={styles.pageProvenanceGrid}>
                 {discoveredOnlyPages.length > 0 && (
@@ -413,6 +439,17 @@ export default function TaskDetails({ taskDetails, isDetailsLoading }) {
             <span className={`status-badge status-${task.status || 'unknown'}`}>
               {(task.status || 'unknown').replace(/_/g, ' ')}
             </span>
+            {isRunning && (
+              <button
+                onClick={handleStop}
+                disabled={stopLoading}
+                style={styles.stopBtn}
+                title="Stop / Cancel active test run"
+              >
+                <Square size={10} fill="currentColor" />
+                {stopLoading ? 'Stopping...' : 'Stop'}
+              </button>
+            )}
             {task.id && (
               <a
                 href={`${API_BASE}/tasks/${task.id}/report.csv`}
@@ -995,6 +1032,21 @@ const styles = {
     color: '#6366f1',
     background: 'rgba(99,102,241,0.1)',
     border: '1px solid rgba(99,102,241,0.3)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'opacity 0.2s',
+  },
+  stopBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: '#ef4444',
+    background: 'rgba(239,68,68,0.1)',
+    border: '1px solid rgba(239,68,68,0.3)',
     borderRadius: '6px',
     padding: '4px 10px',
     cursor: 'pointer',

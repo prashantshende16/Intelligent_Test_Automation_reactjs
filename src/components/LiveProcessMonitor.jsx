@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Activity, Globe, FileText, FormInput, Cpu, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Activity, Globe, FileText, FormInput, Cpu, CheckCircle2, Clock, AlertCircle, Square } from 'lucide-react';
 
 /**
  * Parses field:value pairs from agent log lines.
@@ -116,6 +116,13 @@ const STATUS_CONFIG = {
     bg: 'rgba(239, 68, 68, 0.08)',
     border: 'rgba(239, 68, 68, 0.25)',
     icon: AlertCircle,
+  },
+  stopped: {
+    label: 'Stopped',
+    color: '#fbbf24',
+    bg: 'rgba(245, 158, 11, 0.08)',
+    border: 'rgba(245, 158, 11, 0.25)',
+    icon: Square,
   },
 };
 
