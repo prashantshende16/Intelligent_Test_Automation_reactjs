@@ -452,13 +452,13 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
             )}
             {task.id && (
               <a
-                href={`${API_BASE}/tasks/${task.id}/report.csv`}
+                href={`${API_BASE}/tasks/${task.id}/report.xlsx`}
                 download
                 style={styles.csvDownloadBtn}
-                title="Download full CSV report"
+                title="Download Excel report"
               >
                 <Download size={13} />
-                CSV
+                Excel
               </a>
             )}
           </div>

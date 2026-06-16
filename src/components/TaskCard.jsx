@@ -31,9 +31,9 @@ export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }
   };
 
   const isRunning = ['pending', 'crawling', 'generating_test_cases', 'running_tests'].includes(task.status);
-  const downloadCsv = (e) => {
+  const downloadExcel = (e) => {
     e.stopPropagation();
-    window.open(`${API_BASE}/tasks/${task.id}/report.csv`, '_blank', 'noopener,noreferrer');
+    window.open(`${API_BASE}/tasks/${task.id}/report.xlsx`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -89,9 +89,9 @@ export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }
             <span>Stop Run</span>
           </button>
         ) : (
-          <button type="button" onClick={downloadCsv} style={styles.csvBtn} title="Download CSV report">
+          <button type="button" onClick={downloadExcel} style={styles.csvBtn} title="Download Excel report">
             <Download size={14} />
-            <span>Download CSV</span>
+            <span>Download Excel</span>
           </button>
         )}
       </div>
