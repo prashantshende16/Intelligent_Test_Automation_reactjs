@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronUp, 
   HelpCircle, Lightbulb, Clock, Layers, Link as LinkIcon, Compass, Sparkles,
-  AlertTriangle, Activity, Terminal, Download, Square
+  AlertTriangle, Activity, Terminal, Download, Square, Globe
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
@@ -610,6 +610,31 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
               </pre>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tested Pages Section */}
+      {discoveredPages.length > 0 && (
+        <div className="glass-panel" style={styles.pagesTestedPanel}>
+          <h4 style={styles.agentPanelTitle}>
+            <Globe size={14} color="var(--primary)" />
+            <span>Tested Pages ({discoveredPages.length})</span>
+          </h4>
+          <div style={styles.pagesList}>
+            {discoveredPages.map((pageUrl, idx) => (
+              <div key={idx} style={styles.pageItemRow}>
+                <span style={styles.pageItemNumber}>#{idx + 1}</span>
+                <a 
+                  href={pageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={styles.pageItemLink}
+                >
+                  {pageUrl}
+                </a>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1856,5 +1881,42 @@ const styles = {
     backgroundColor: '#060912',
     border: '1px solid rgba(255,255,255,0.05)',
     borderRadius: '6px',
+  },
+  pagesTestedPanel: {
+    padding: '16px',
+    backgroundColor: 'rgba(16, 22, 42, 0.4)',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    marginTop: '16px',
+  },
+  pagesList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  pageItemRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '8px 12px',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
+    borderRadius: '8px',
+    fontSize: '0.85rem',
+  },
+  pageItemNumber: {
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    color: 'var(--accent)',
+    fontFamily: 'monospace',
+  },
+  pageItemLink: {
+    color: 'var(--text-main)',
+    textDecoration: 'none',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    transition: 'var(--transition)',
+    cursor: 'pointer',
   },
 };

@@ -18,6 +18,51 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
   const [codeError, setCodeError] = useState('');
   const [error, setError] = useState('');
 
+  const [aiModel, setAiModel] = useState('auto');
+  const [userPrompt, setUserPrompt] = useState('');
+  const [customUseCases, setCustomUseCases] = useState([]);
+
+  const handleAddCustomUseCase = () => {
+    setCustomUseCases([
+      ...customUseCases,
+      { title: '', description: '', test_cases: [] }
+    ]);
+  };
+
+  const handleRemoveCustomUseCase = (index) => {
+    setCustomUseCases(customUseCases.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateUseCaseTitle = (index, value) => {
+    const updated = [...customUseCases];
+    updated[index].title = value;
+    setCustomUseCases(updated);
+  };
+
+  const handleUpdateUseCaseDesc = (index, value) => {
+    const updated = [...customUseCases];
+    updated[index].description = value;
+    setCustomUseCases(updated);
+  };
+
+  const handleAddCustomTestCase = (ucIndex) => {
+    const updated = [...customUseCases];
+    updated[ucIndex].test_cases.push({ title: '', steps: '', expected_result: '' });
+    setCustomUseCases(updated);
+  };
+
+  const handleRemoveCustomTestCase = (ucIndex, tcIndex) => {
+    const updated = [...customUseCases];
+    updated[ucIndex].test_cases = updated[ucIndex].test_cases.filter((_, i) => i !== tcIndex);
+    setCustomUseCases(updated);
+  };
+
+  const handleUpdateTestCase = (ucIndex, tcIndex, field, value) => {
+    const updated = [...customUseCases];
+    updated[ucIndex].test_cases[tcIndex][field] = value;
+    setCustomUseCases(updated);
+  };
+
   // Auto-check mobile webview viewport if target URL or codebase belongs to the mobile webview project
   React.useEffect(() => {
     if (
@@ -82,6 +127,11 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       auth_password: authPassword,
       auth_otp_code: authOtpCode.trim(),
       auth_otp_hint: authOtpHint.trim(),
+      ai_model: aiModel,
+      user_prompt: userPrompt.trim() || null,
+      custom_use_cases_json: customUseCases.length > 0 
+        ? JSON.stringify(customUseCases.filter(uc => uc.title.trim() !== ""))
+        : null
     });
     setUrl('');
     setSeedUrls('');
@@ -95,6 +145,9 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
     setAuthPassword('');
     setAuthOtpCode('');
     setAuthOtpHint('');
+    setAiModel('auto');
+    setUserPrompt('');
+    setCustomUseCases([]);
   };
 
   return (
@@ -155,7 +208,39 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
               />
             </div>
             {codeError && <div style={styles.errorText}>{codeError}</div>}
-            {error && <div style={styles.errorText}>{error}</div>}
+             {error && <div style={styles.errorText}>{error}</div>}
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.label}>AI Model Selection</label>
+            <div style={styles.fieldRow}>
+              <select
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                disabled={isSubmitting}
+                style={styles.select}
+              >
+                <option value="auto">Auto-Route (Based on available API Keys)</option>
+                <option value="gemini-1.5-flash">Google Gemini (gemini-1.5-flash)</option>
+                <option value="gpt-4o">OpenAI ChatGPT (gpt-4o)</option>
+              </select>
+            </div>
+            <div style={styles.helpText}>Select which AI engine handles parallel sub-agents and reviews codebase tasks.</div>
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.label}>Additional Instructions / Prompts</label>
+            <div style={styles.fieldRow}>
+              <textarea
+                rows={2}
+                placeholder="e.g. Focus on checking responsive layout overflow. Test with standard credentials."
+                value={userPrompt}
+                onChange={(e) => setUserPrompt(e.target.value)}
+                disabled={isSubmitting}
+                style={styles.textarea}
+              />
+            </div>
+            <div style={styles.helpText}>Provide custom text instructions to instruct the AI agent to focus on specific pages, scenarios, or links.</div>
           </div>
 
           <div style={styles.inputWrapper}>
@@ -260,6 +345,96 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
                 />
               </div>
             )}
+          </div>
+
+          <div style={styles.inputWrapper}>
+            <label style={styles.label}>Custom Use Cases & Test Cases</label>
+            <div style={styles.customContainer}>
+              {customUseCases.map((uc, ucIdx) => (
+                <div key={ucIdx} style={styles.customUseCaseCard}>
+                  <div style={styles.customUseCaseHeader}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--accent)' }}>Use Case #{ucIdx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomUseCase(ucIdx)}
+                      style={styles.removeBtn}
+                    >
+                      Remove Use Case
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Use Case Title (e.g. Navigation check)"
+                    value={uc.title}
+                    onChange={(e) => handleUpdateUseCaseTitle(ucIdx, e.target.value)}
+                    style={styles.customInput}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Use Case Description (optional)"
+                    value={uc.description}
+                    onChange={(e) => handleUpdateUseCaseDesc(ucIdx, e.target.value)}
+                    style={styles.customInput}
+                  />
+                  
+                  <div style={{ marginLeft: '12px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)' }}>Test Cases</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddCustomTestCase(ucIdx)}
+                        style={styles.addTestBtn}
+                      >
+                        + Add Test Case
+                      </button>
+                    </div>
+
+                    {uc.test_cases.map((tc, tcIdx) => (
+                      <div key={tcIdx} style={styles.customTestCaseCard}>
+                        <div style={styles.customUseCaseHeader}>
+                          <span style={{ fontSize: '0.7rem', fontWeight: '600', color: 'var(--primary)' }}>Test Case #{tcIdx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomTestCase(ucIdx, tcIdx)}
+                            style={styles.removeBtn}
+                          >
+                            Remove Test
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Test Title (e.g. Verify link redirects)"
+                          value={tc.title}
+                          onChange={(e) => handleUpdateTestCase(ucIdx, tcIdx, 'title', e.target.value)}
+                          style={styles.customInputCompact}
+                        />
+                        <textarea
+                          rows={2}
+                          placeholder="Steps (e.g. 1. Click about link\n2. Verify header)"
+                          value={tc.steps}
+                          onChange={(e) => handleUpdateTestCase(ucIdx, tcIdx, 'steps', e.target.value)}
+                          style={styles.customTextareaCompact}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Expected Result (e.g. Reaches about page)"
+                          value={tc.expected_result}
+                          onChange={(e) => handleUpdateTestCase(ucIdx, tcIdx, 'expected_result', e.target.value)}
+                          style={styles.customInputCompact}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddCustomUseCase}
+                style={styles.addUseCaseBtn}
+              >
+                + Add Custom Use Case
+              </button>
+            </div>
           </div>
 
           {/* Explanation checklist */}
@@ -527,5 +702,112 @@ const styles = {
     borderTop: '2px solid #ffffff',
     borderRadius: '50%',
     animation: 'spin-slow 0.8s linear infinite',
+  },
+  select: {
+    flex: 1,
+    height: '42px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    padding: '0 14px',
+    color: 'var(--text-main)',
+    fontSize: '0.9rem',
+    outline: 'none',
+    width: '100%',
+    cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'rgba(255,255,255,0.6)\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 14px center',
+    backgroundSize: '14px',
+  },
+  customContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    marginTop: '4px',
+  },
+  customUseCaseCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    borderRadius: '10px',
+    padding: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  customUseCaseHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  removeBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--error)',
+    fontSize: '0.7rem',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    borderRadius: '4px',
+  },
+  addTestBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--primary)',
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    cursor: 'pointer',
+  },
+  addUseCaseBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    border: '1px dashed var(--border-color)',
+    borderRadius: '8px',
+    color: 'var(--text-main)',
+    padding: '8px',
+    fontSize: '0.8rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'var(--transition)',
+    textAlign: 'center',
+  },
+  customTestCaseCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.03)',
+    borderRadius: '8px',
+    padding: '10px',
+    marginTop: '6px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  customInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    height: '34px',
+    padding: '0 10px',
+    color: 'var(--text-main)',
+    fontSize: '0.85rem',
+    outline: 'none',
+  },
+  customInputCompact: {
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    height: '30px',
+    padding: '0 8px',
+    color: 'var(--text-main)',
+    fontSize: '0.8rem',
+    outline: 'none',
+  },
+  customTextareaCompact: {
+    backgroundColor: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '6px',
+    padding: '6px 8px',
+    color: 'var(--text-main)',
+    fontSize: '0.8rem',
+    outline: 'none',
+    resize: 'vertical',
+    fontFamily: 'var(--font-body)',
   },
 };
