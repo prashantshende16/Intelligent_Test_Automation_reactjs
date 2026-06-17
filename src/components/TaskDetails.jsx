@@ -103,7 +103,7 @@ function findTestScreenshot(testId, errors) {
   return linked ? getScreenshotUrl(linked.screenshot_path) : null;
 }
 
-export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails }) {
+export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest }) {
   const [activeTab, setActiveTab] = useState('test-cases');
   const [selectedErrorId, setSelectedErrorId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
@@ -120,9 +120,13 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
     if (!task?.id) return;
     setStopLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/tasks/${task.id}/stop`, { method: 'POST' });
-      if (!res.ok) {
-        throw new Error('Failed to stop task.');
+      if (typeof onStopTest === 'function') {
+        await onStopTest(task.id);
+      } else {
+        const res = await fetch(`${API_BASE}/tasks/${task.id}/stop`, { method: 'POST' });
+        if (!res.ok) {
+          throw new Error('Failed to stop task.');
+        }
       }
       if (typeof onRefreshDetails === 'function') {
         onRefreshDetails();
@@ -331,6 +335,28 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
             </div>
           </div>
         );
+      case 'planned':
+        return (
+          <div className="glass-panel" style={{ ...styles.agentBox, border: '1px dashed var(--primary-glow)', backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <Compass size={24} color="var(--primary)" />
+              <div>
+                <h4 style={styles.agentBoxTitle}>Test Suite Planned</h4>
+                <p style={styles.agentBoxDesc}>
+                  AI agent crawled the site and generated <strong>{test_cases.length} test cases</strong> across <strong>{use_cases.length} use cases</strong>. Ready for validation execution.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onStartTest && onStartTest(task.id)}
+              className="btn-primary"
+              style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <Sparkles size={16} />
+              <span>Start Automated Test Suite</span>
+            </button>
+          </div>
+        );
       case 'crawling':
         return (
           <div style={styles.agentBox}>
@@ -439,6 +465,16 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
             <span className={`status-badge status-${task.status || 'unknown'}`}>
               {(task.status || 'unknown').replace(/_/g, ' ')}
             </span>
+            {task.status === 'planned' && (
+              <button
+                onClick={() => onStartTest && onStartTest(task.id)}
+                style={styles.startBtn}
+                title="Start Playwright Test Execution"
+              >
+                <Sparkles size={10} fill="currentColor" />
+                <span>Start Test</span>
+              </button>
+            )}
             {isRunning && (
               <button
                 onClick={handleStop}
@@ -705,9 +741,10 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                     {isUcExpanded && (
                       <div style={styles.testList}>
                         {ucTests.map(test => {
-                          const isTestExpanded = expandedTestCases[test.id];
+                          const isTestExpanded = expandedTestCases[test.id] ?? (test.status === 'running' || test.status === 'failed');
                           const hasPassed = test.status === 'passed';
                           const hasFailed = test.status === 'failed';
+                          const isRunningTest = test.status === 'running';
                           const isPending = test.status === 'pending';
 
                           return (
@@ -719,6 +756,19 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                                 <div style={styles.testTitleCol}>
                                   {hasPassed && <CheckCircle2 size={16} color="var(--success)" />}
                                   {hasFailed && <XCircle size={16} color="var(--error)" />}
+                                  {isRunningTest && (
+                                    <div 
+                                      className="agent-spinner" 
+                                      style={{ 
+                                        width: '14px', 
+                                        height: '14px', 
+                                        borderWidth: '2px', 
+                                        borderTopColor: 'var(--accent)',
+                                        borderRadius: '50%',
+                                        display: 'inline-block'
+                                      }} 
+                                    />
+                                  )}
                                   {isPending && <Clock size={16} color="var(--info)" className="spin-effect" />}
                                   <span style={{ 
                                     ...styles.testTitle,
@@ -1072,6 +1122,21 @@ const styles = {
     color: '#ef4444',
     background: 'rgba(239,68,68,0.1)',
     border: '1px solid rgba(239,68,68,0.3)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'opacity 0.2s',
+  },
+  startBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: '#2dd4bf',
+    background: 'rgba(20, 184, 166, 0.1)',
+    border: '1px solid rgba(20, 184, 166, 0.3)',
     borderRadius: '6px',
     padding: '4px 10px',
     cursor: 'pointer',

@@ -205,6 +205,26 @@ export default function App() {
     }
   };
 
+  const handleStartTest = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${id}/start-test`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        await fetchTasks(false);
+        fetchStats();
+        if (selectedTaskId === id) {
+          fetchDetails(id, false);
+        }
+      } else {
+        const errData = await res.json();
+        alert(`Error: ${errData.detail || 'Failed to start test'}`);
+      }
+    } catch (err) {
+      console.error('Error starting test:', err);
+    }
+  };
+
   return (
     <div style={styles.appContainer}>
       {/* Header bar */}
@@ -281,6 +301,8 @@ export default function App() {
           <TaskDetails 
             taskDetails={taskDetails} 
             isDetailsLoading={isDetailsLoading}
+            onStartTest={handleStartTest}
+            onStopTest={handleStopTask}
             onRefreshDetails={() => {
               fetchDetails(selectedTaskId, false);
               fetchTasks(false);

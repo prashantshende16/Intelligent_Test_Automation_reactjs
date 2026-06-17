@@ -18,6 +18,7 @@ export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }
       case 'pending': return 10;
       case 'crawling': return 35;
       case 'generating_test_cases': return 60;
+      case 'planned': return 75;
       case 'running_tests': return 85;
       case 'completed': return 100;
       case 'failed': return 100;
