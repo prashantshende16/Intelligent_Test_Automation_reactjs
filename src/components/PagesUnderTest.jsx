@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Download, CheckCircle2, XCircle, Clock, AlertTriangle, Lightbulb, Globe } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, CheckCircle2, XCircle, Clock, AlertTriangle, Lightbulb, Globe, Layers, ShieldAlert } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -72,7 +72,7 @@ function downloadPageCSV(keyword, pageUrl, pageTests, pageErrors, pageUseCases, 
   URL.revokeObjectURL(a.href);
 }
 
-function PageRow({ page, taskDetails, taskStatus }) {
+function PageRow({ page, taskDetails, taskStatus, setActiveTab, setFilterPageUrl }) {
   const [expanded, setExpanded] = useState(false);
   const { pageUrl, keyword, pageTests, pageStatus } = page;
   const st = STATUS_STYLES[pageStatus] || STATUS_STYLES.pending;
@@ -128,6 +128,71 @@ function PageRow({ page, taskDetails, taskStatus }) {
       {/* Expanded detail */}
       {expanded && (
         <div style={styles.expandedBody}>
+          {/* 4 Option Buttons for Redirecting / Jumping to detailed view */}
+          <div className="page-action-row">
+            <button
+              type="button"
+              onClick={() => window.open(pageUrl, '_blank')}
+              className="page-action-btn page-action-btn-blue"
+              style={{ outline: 'none' }}
+            >
+              <Globe size={14} color="#60a5fa" />
+              <span>Redirect URL (Open Page)</span>
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => {
+                if (setActiveTab) setActiveTab('test-cases');
+                if (setFilterPageUrl) setFilterPageUrl(pageUrl);
+                setTimeout(() => {
+                  const el = document.getElementById('task-details-tabs');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+              }}
+              className="page-action-btn page-action-btn-purple"
+              style={{ outline: 'none' }}
+            >
+              <Layers size={14} color="#c084fc" />
+              <span>Use Case / Test Case</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (setActiveTab) setActiveTab('errors');
+                if (setFilterPageUrl) setFilterPageUrl(pageUrl);
+                setTimeout(() => {
+                  const el = document.getElementById('task-details-tabs');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+              }}
+              className="page-action-btn page-action-btn-red"
+              style={{ outline: 'none' }}
+            >
+              <ShieldAlert size={14} color="#f87171" />
+              <span>Error or Warning</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (setActiveTab) setActiveTab('suggestions');
+                if (setFilterPageUrl) setFilterPageUrl(pageUrl);
+                setTimeout(() => {
+                  const el = document.getElementById('task-details-tabs');
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
+              }}
+              className="page-action-btn page-action-btn-orange"
+              style={{ outline: 'none' }}
+            >
+              <Lightbulb size={14} color="#fbbf24" />
+              <span>AI Suggestion</span>
+            </button>
+          </div>
+
+          {/* Running: show live log snippet */}
           {/* Running: show live log snippet */}
           {pageStatus === 'running' && (
             <div style={styles.liveTag}>
@@ -209,7 +274,7 @@ function PageRow({ page, taskDetails, taskStatus }) {
   );
 }
 
-export default function PagesUnderTest({ taskDetails, tasks }) {
+export default function PagesUnderTest({ taskDetails, tasks, setActiveTab, setFilterPageUrl }) {
   const { task = {}, test_cases = [] } = taskDetails || {};
 
   const pages = useMemo(() => {
@@ -253,6 +318,8 @@ export default function PagesUnderTest({ taskDetails, tasks }) {
             page={page}
             taskDetails={taskDetails}
             taskStatus={task.status}
+            setActiveTab={setActiveTab}
+            setFilterPageUrl={setFilterPageUrl}
           />
         ))}
       </div>

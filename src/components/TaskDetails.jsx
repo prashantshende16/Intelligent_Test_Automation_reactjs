@@ -103,8 +103,7 @@ function findTestScreenshot(testId, errors) {
   return linked ? getScreenshotUrl(linked.screenshot_path) : null;
 }
 
-export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest }) {
-  const [activeTab, setActiveTab] = useState('test-cases');
+export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest, activeTab = 'test-cases', setActiveTab, filterPageUrl, setFilterPageUrl }) {
   const [selectedErrorId, setSelectedErrorId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
   const [resumeUsername, setResumeUsername] = useState('');
@@ -151,8 +150,21 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
 
   // Destructure props BEFORE any useEffect that references these variables
   const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, auth, auth_state, seeds, agent_states = [] } = taskDetails || {};
+
+  const filteredTestCases = filterPageUrl
+    ? test_cases.filter(tc => tc.page_url === filterPageUrl)
+    : test_cases;
+
+  const filteredUseCases = filterPageUrl
+    ? use_cases.filter(uc => filteredTestCases.some(tc => tc.use_case_id === uc.id))
+    : use_cases;
+
+  const filteredErrors = filterPageUrl
+    ? errors.filter(e => e.page_url === filterPageUrl)
+    : errors;
+
   const selectedAgent = agent_states.find(state => state.id === selectedAgentId);
-  const selectedError = errors.find(err => err.id === selectedErrorId) || errors[0] || null;
+  const selectedError = filteredErrors.find(err => err.id === selectedErrorId) || filteredErrors[0] || null;
   const agentWarningCount = agent_states.reduce((count, state) => count + (state.errors_found || 0), 0);
   const orchestratorAgent = agent_states.find(state => state.agent_name === 'Orchestrator');
   const requiredAuthFields = (() => {
@@ -675,7 +687,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
       )}
 
       {/* Tabs */}
-      <div style={styles.tabsRow}>
+      <div id="task-details-tabs" style={styles.tabsRow}>
         <button type="button"
           onClick={() => setActiveTab('test-cases')}
           style={{
@@ -685,7 +697,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
           }}
         >
           <Layers size={16} />
-          <span>Test Cases ({test_cases.length})</span>
+          <span>Test Cases ({filterPageUrl ? `${filteredTestCases.length}/${test_cases.length}` : test_cases.length})</span>
         </button>
 
         <button type="button"
@@ -697,7 +709,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
           }}
         >
           <ShieldAlert size={16} />
-          <span>Browser Errors ({errors.length})</span>
+          <span>Browser Errors ({filterPageUrl ? `${filteredErrors.length}/${errors.length}` : errors.length})</span>
         </button>
 
         <button type="button"
@@ -715,17 +727,35 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
 
       {/* Tab Panels */}
       <div style={styles.tabContent}>
+        {filterPageUrl && (
+          <div style={styles.filterAlert}>
+            <div style={styles.filterAlertLeft}>
+              <span style={styles.filterAlertDot} />
+              <span style={styles.filterAlertText}>
+                Showing results filtered for page: <strong style={{ color: '#fff' }}>{filterPageUrl.replace(/^https?:\/\//, '')}</strong>
+              </span>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setFilterPageUrl(null)} 
+              style={styles.clearFilterBtn}
+            >
+              Show All Pages
+            </button>
+          </div>
+        )}
+
         {/* TAB 1: TEST CASES */}
         {activeTab === 'test-cases' && (
           <div className="animate-slide-in">
-            {use_cases.length === 0 ? (
+            {filteredUseCases.length === 0 ? (
               <div style={styles.noDataBox}>
                 <Layers size={36} color="var(--text-dim)" />
-                <div>No test cases generated yet.</div>
+                <div>{filterPageUrl ? "No test cases generated for this page." : "No test cases generated yet."}</div>
               </div>
             ) : (
-              use_cases.map(uc => {
-                const ucTests = test_cases.filter(t => t.use_case_id === uc.id);
+              filteredUseCases.map(uc => {
+                const ucTests = filteredTestCases.filter(t => t.use_case_id === uc.id);
                 const isUcExpanded = expandedUseCases[uc.id] !== false; // Expanded by default
 
                 return (
@@ -897,12 +927,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
         {/* TAB 2: ERRORS FOUND WITH CODE REVIEW SPLIT SCREEN */}
         {activeTab === 'errors' && (
           <div className="animate-slide-in">
-            {errors.length === 0 ? (
+            {filteredErrors.length === 0 ? (
               <div className="glass-panel" style={styles.noIssuesBox}>
                 <CheckCircle2 size={40} color="var(--success)" style={{ marginBottom: '10px' }} />
-                <h4 style={{ color: 'var(--success)', fontWeight: '700', fontSize: '1rem', marginBottom: '4px' }}>No Bugs Detected</h4>
-                <p style={styles.noIssuesDesc}>Congratulations! No critical errors or test violations were reported for this site version.</p>
-                {agentWarningCount > 0 && (
+                <h4 style={{ color: 'var(--success)', fontWeight: '700', fontSize: '1rem', marginBottom: '4px' }}>{filterPageUrl ? "No Page Bugs" : "No Bugs Detected"}</h4>
+                <p style={styles.noIssuesDesc}>{filterPageUrl ? "No errors or violations were reported for this specific page." : "Congratulations! No critical errors or test violations were reported for this site version."}</p>
+                {agentWarningCount > 0 && !filterPageUrl && (
                   <p style={styles.noIssuesDesc}>
                     {agentWarningCount} sub-agent warning{agentWarningCount > 1 ? 's are' : ' is'} available in the Active AI Sub-Agents panel above.
                   </p>
@@ -912,8 +942,8 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
               <div style={styles.splitWorkspace}>
                 {/* Left Column: Errors list */}
                 <div style={styles.errorsListCol}>
-                  {errors.map(err => {
-                    const relatedTest = test_cases.find(test => test.id === err.test_case_id);
+                  {filteredErrors.map(err => {
+                    const relatedTest = filteredTestCases.find(test => test.id === err.test_case_id);
                     const failureSummary = err.message.includes('.') ? err.message.split('.').slice(0, 1).join('.').trim() : err.message;
                     return (
                       <button
@@ -1093,6 +1123,45 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
 }
 
 const styles = {
+  filterAlert: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 14px',
+    background: 'rgba(99, 102, 241, 0.08)',
+    border: '1px solid rgba(99, 102, 241, 0.2)',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    gap: '12px',
+    flexWrap: 'wrap',
+  },
+  filterAlertLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  filterAlertDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    background: '#818cf8',
+    boxShadow: '0 0 6px #818cf8',
+  },
+  filterAlertText: {
+    fontSize: '0.8rem',
+    color: 'var(--text-muted)',
+  },
+  clearFilterBtn: {
+    fontSize: '0.72rem',
+    fontWeight: '700',
+    color: '#a5b4fc',
+    background: 'rgba(99, 102, 241, 0.15)',
+    border: '1px solid rgba(99, 102, 241, 0.3)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
   container: {
     display: 'flex',
     flexDirection: 'column',

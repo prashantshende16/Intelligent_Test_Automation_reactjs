@@ -293,3 +293,59 @@ body {
 .priority-low { background: rgba(107, 114, 128, 0.2); color: #d1d5db; }
 .priority-medium { background: rgba(99, 102, 241, 0.2); color: #c7d2fe; }
 .priority-high { background: rgba(20, 184, 166, 0.2); color: #99f6e4; }
+
+/* PagesUnderTest action buttons */
+.page-action-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 14px;
+}
+
+.page-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-action-btn-blue:hover {
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(96, 165, 250, 0.08);
+  color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.page-action-btn-purple:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.08);
+  color: #c084fc;
+  transform: translateY(-1px);
+}
+
+.page-action-btn-red:hover {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.page-action-btn-orange:hover {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.08);
+  color: #fde68a;
+  transform: translateY(-1px);
+}
+

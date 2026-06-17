@@ -20,6 +20,13 @@ export default function App() {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('test-cases');
+  const [filterPageUrl, setFilterPageUrl] = useState(null);
+
+  // Clear page filter when selecting another task
+  useEffect(() => {
+    setFilterPageUrl(null);
+  }, [selectedTaskId]);
 
   // Keep a ref for active polling to prevent multiple intervals
   const pollingRef = useRef(null);
@@ -254,7 +261,12 @@ export default function App() {
       <StatsOverview stats={stats} />
 
       {/* Pages Under Test */}
-      <PagesUnderTest taskDetails={taskDetails} tasks={tasks} />
+      <PagesUnderTest 
+        taskDetails={taskDetails} 
+        tasks={tasks} 
+        setActiveTab={setActiveTab} 
+        setFilterPageUrl={setFilterPageUrl} 
+      />
 
       {/* Main split dashboard view */}
       <div style={styles.layoutGrid}>
@@ -303,6 +315,10 @@ export default function App() {
             isDetailsLoading={isDetailsLoading}
             onStartTest={handleStartTest}
             onStopTest={handleStopTask}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            filterPageUrl={filterPageUrl}
+            setFilterPageUrl={setFilterPageUrl}
             onRefreshDetails={() => {
               fetchDetails(selectedTaskId, false);
               fetchTasks(false);
