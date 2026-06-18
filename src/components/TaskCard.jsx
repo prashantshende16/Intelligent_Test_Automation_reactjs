@@ -90,10 +90,24 @@ export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }
             <span>Stop Run</span>
           </button>
         ) : (
-          <button type="button" onClick={downloadExcel} style={styles.csvBtn} title="Download Excel report">
-            <Download size={14} />
-            <span>Download Excel</span>
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+            <button type="button" onClick={downloadExcel} style={styles.csvBtn} title="Download Excel report">
+              <Download size={14} />
+              <span>Download Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(`${API_BASE}/tasks/${task.id}/report.zip`, '_blank', 'noopener,noreferrer');
+              }}
+              style={styles.zipBtn}
+              title="Download ZIP report (with Excel sheet and screenshots folder)"
+            >
+              <Download size={14} />
+              <span>Download ZIP</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -201,6 +215,7 @@ const styles = {
   csvBtn: {
     display: 'inline-flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: '6px',
     padding: '7px 10px',
     borderRadius: '8px',
@@ -209,6 +224,21 @@ const styles = {
     color: 'var(--text-main)',
     fontSize: '0.78rem',
     cursor: 'pointer',
+    width: '100%',
+  },
+  zipBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    padding: '7px 10px',
+    borderRadius: '8px',
+    border: '1px solid rgba(16, 185, 129, 0.2)',
+    background: 'rgba(16, 185, 129, 0.08)',
+    color: '#10b981',
+    fontSize: '0.78rem',
+    cursor: 'pointer',
+    width: '100%',
   },
   stopBtn: {
     display: 'inline-flex',

@@ -517,15 +517,26 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
               </button>
             )}
             {task.id && (
-              <a
-                href={`${API_BASE}/tasks/${task.id}/report.xlsx`}
-                download
-                style={styles.csvDownloadBtn}
-                title="Download Excel report"
-              >
-                <Download size={13} />
-                Excel
-              </a>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={`${API_BASE}/tasks/${task.id}/report.xlsx`}
+                  download
+                  style={styles.csvDownloadBtn}
+                  title="Download Excel report"
+                >
+                  <Download size={13} />
+                  Excel
+                </a>
+                <a
+                  href={`${API_BASE}/tasks/${task.id}/report.zip`}
+                  download
+                  style={styles.zipDownloadBtn}
+                  title="Download ZIP report (with Excel sheet and screenshots folder)"
+                >
+                  <Download size={13} />
+                  ZIP Report
+                </a>
+              </div>
             )}
           </div>
         </div>
@@ -1194,6 +1205,21 @@ const styles = {
     color: '#6366f1',
     background: 'rgba(99,102,241,0.1)',
     border: '1px solid rgba(99,102,241,0.3)',
+    borderRadius: '6px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'opacity 0.2s',
+  },
+  zipDownloadBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    fontSize: '0.7rem',
+    fontWeight: '700',
+    color: '#10b981',
+    background: 'rgba(16,185,129,0.1)',
+    border: '1px solid rgba(16,185,129,0.3)',
     borderRadius: '6px',
     padding: '4px 10px',
     cursor: 'pointer',
