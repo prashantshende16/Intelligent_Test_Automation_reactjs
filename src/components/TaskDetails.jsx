@@ -53,6 +53,23 @@ function getDummyValue(fieldName) {
 
 function extractFormFields(test) {
   const combined = (test.steps || '') + ' ' + (test.error_message || '');
+  
+  if (combined.includes('JSON_DUMMY_DATA:')) {
+    try {
+      const parts = combined.split('JSON_DUMMY_DATA:');
+      const jsonStr = parts[1].trim().split('\n')[0].trim();
+      const parsed = JSON.parse(jsonStr);
+      if (parsed && typeof parsed === 'object') {
+        return Object.entries(parsed).map(([field, value]) => ({
+          field: field,
+          value: String(value)
+        }));
+      }
+    } catch (e) {
+      console.error('Failed to parse embedded JSON_DUMMY_DATA', e);
+    }
+  }
+
   const fieldSet = new Set();
 
   // List after "fields:" keyword
@@ -81,9 +98,10 @@ function extractFormFields(test) {
   }
 
   // Capitalised words after colon in error (e.g. "John, Doe")
+  const textNoJson = combined.replace(/JSON_DUMMY_DATA:.*$/, '');
   const capRe = /:\s*([A-Z][a-z]+(?:,\s*[A-Z][a-z]+)*)/g;
   let cm;
-  while ((cm = capRe.exec(test.error_message || '')) !== null) {
+  while ((cm = capRe.exec(textNoJson)) !== null) {
     cm[1].split(',').forEach(function(w) {
       const c = w.trim();
       if (c.length > 1) fieldSet.add(c);
