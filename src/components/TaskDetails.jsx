@@ -35,9 +35,18 @@ const DUMMY_MAP = {
   amount:'100.00', price:'99.99', quantity:'1', search:'test query',
 };
 
-function getDummyValue(fieldName) {
+function getDummyValue(fieldName, pageUrl) {
   if (!fieldName) return 'test_value';
   const lower = fieldName.toLowerCase().replace(/[-\s]/g, '_');
+  
+  const urlLower = (pageUrl || '').toLowerCase();
+  const isLoginPage = urlLower.includes('login') || urlLower.includes('signin');
+  
+  if (isLoginPage) {
+    if (lower.includes('email') || lower.includes('username') || lower.includes('user')) return 'admin@gmail.com';
+    if (lower.includes('pass')) return 'Admin@#123';
+  }
+  
   if (DUMMY_MAP[lower]) return DUMMY_MAP[lower];
   for (const [k, v] of Object.entries(DUMMY_MAP)) {
     if (lower.includes(k)) return v;
@@ -45,9 +54,21 @@ function getDummyValue(fieldName) {
   if (lower.includes('email')) return 'john.doe@testmail.com';
   if (lower.includes('pass'))  return 'Test@Secure#2024';
   if (lower.includes('phone') || lower.includes('mobile')) return '+1-555-0100';
-  if (lower.includes('name'))  return 'John Doe';
-  if (lower.includes('date'))  return '2024-06-15';
-  if (lower.includes('url') || lower.includes('link')) return 'https://example.com';
+  if (lower.includes('department') || lower.includes('dept')) {
+    if (lower.includes('desc')) {
+      return 'This department handles visual, responsive, and performance QA automation testing.';
+    }
+    return 'Quality Assurance';
+  }
+  if (lower.includes('description') || lower.includes('desc')) return 'This is a sample description generated automatically for testing purposes.';
+  if (lower.includes('role') || lower.includes('designation')) return 'Quality Assurance Lead';
+  if (lower.includes('address')) return '404 Innovation Way, Tech Park';
+  if (lower.includes('city')) return 'Mumbai';
+  if (lower.includes('state')) return 'Maharashtra';
+  if (lower.includes('zip') || lower.includes('pin') || lower.includes('postal')) return '400001';
+  if (lower.includes('name'))  return 'QA Test User';
+  if (lower.includes('date'))  return '2026-06-18';
+  if (lower.includes('url') || lower.includes('link')) return 'https://pns-capital.datagrid.co.in';
   return `demo_${lower}`;
 }
 
@@ -108,10 +129,26 @@ function extractFormFields(test) {
     });
   }
 
+  const ignoreWords = new Set([
+    'with', 'the', 'a', 'an', 'some', 'all', 'any', 'required', 'fields', 
+    'blank', 'and', 'attempt', 'submit', 'button', 'form', 'page', 'values', 
+    'data', 'input', 'inputs', 'field', 'empty', 'where', 'applicable', 'validation'
+  ]);
+
   return Array.from(fieldSet)
-    .filter(function(f) { return f && f.length > 1 && !/^\d+$/.test(f); })
+    .filter(function(f) { 
+      const clean = f.toLowerCase().trim();
+      if (!clean || clean.length <= 1 || /^\d+$/.test(clean)) return false;
+      if (ignoreWords.has(clean)) return false;
+      
+      // Filter out multi-word phrases composed entirely of ignored words
+      const words = clean.split(/[\s_-]+/);
+      if (words.every(w => ignoreWords.has(w))) return false;
+      
+      return true; 
+    })
     .slice(0, 15)
-    .map(function(f) { return { field: f, value: getDummyValue(f) }; });
+    .map(function(f) { return { field: f, value: getDummyValue(f, test.page_url) }; });
 }
 
 // Find screenshot URL from errors linked to a test case
@@ -177,9 +214,9 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
     ? use_cases.filter(uc => filteredTestCases.some(tc => tc.use_case_id === uc.id))
     : use_cases;
 
-  const filteredErrors = filterPageUrl
+  const filteredErrors = (filterPageUrl
     ? errors.filter(e => e.page_url === filterPageUrl)
-    : errors;
+    : errors).filter(e => e.severity !== 'passed' && e.severity !== 'info' && !(e.message || '').includes("Validation passed"));
 
   const selectedAgent = agent_states.find(state => state.id === selectedAgentId);
   const selectedError = filteredErrors.find(err => err.id === selectedErrorId) || filteredErrors[0] || null;
@@ -259,8 +296,8 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
     if (codeReviewRef.current) {
       codeReviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    if (errors && errors.length > 0 && selectedErrorId === null) {
-      setSelectedErrorId(errors[0].id);
+    if (filteredErrors && filteredErrors.length > 0 && selectedErrorId === null) {
+      setSelectedErrorId(filteredErrors[0].id);
     }
     if (task.status === 'failed' && orchestratorAgent && selectedAgentId !== orchestratorAgent.id) {
       setSelectedAgentId(orchestratorAgent.id);
@@ -738,7 +775,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
           }}
         >
           <ShieldAlert size={16} />
-          <span>Browser Errors ({filterPageUrl ? `${filteredErrors.length}/${errors.length}` : errors.length})</span>
+          <span>Browser Errors ({filterPageUrl ? `${filteredErrors.length}/${errors.filter(e => e.severity !== 'passed' && e.severity !== 'info' && !(e.message || '').includes("Validation passed")).length}` : filteredErrors.length})</span>
         </button>
 
         <button type="button"
