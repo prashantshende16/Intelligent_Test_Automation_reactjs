@@ -1100,12 +1100,21 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                           <Terminal size={32} color="var(--text-dim)" style={{ marginBottom: '8px' }} />
                           <div>No codebase reference mapped</div>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            Specify a valid codebase path to run the automated CodeReview agent.
+                            Specify a valid codebase path to run the automated CodeCorrelation agent.
                           </p>
                         </div>
                       );
                     }
                     
+                    let traceChain = [];
+                    if (ref.trace_chain_json) {
+                      try {
+                        traceChain = JSON.parse(ref.trace_chain_json);
+                      } catch (e) {
+                        console.error("Failed to parse trace chain", e);
+                      }
+                    }
+
                     return (
                       <div style={styles.codeReviewDetail}>
                         <div style={styles.codeReviewHeader}>
@@ -1114,6 +1123,27 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                             <span style={styles.codeLinesLabel}>Lines {ref.start_line}-{ref.end_line}</span>
                           </div>
                         </div>
+
+                        {traceChain && traceChain.length > 0 && (
+                          <div style={styles.traceChainBlock}>
+                            <div style={styles.codeBlockHeader}>Full-Stack Correlation Trace</div>
+                            <div style={styles.traceChainFlow}>
+                              {traceChain.map((step, idx) => (
+                                <React.Fragment key={idx}>
+                                  <div style={styles.traceStep}>
+                                    <div style={styles.traceLayer}>{step.layer}</div>
+                                    <div style={styles.traceValue}>
+                                      {step.file || step.endpoint || step.table || 'Unknown'}
+                                    </div>
+                                  </div>
+                                  {idx < traceChain.length - 1 && (
+                                    <div style={styles.traceArrow}>→</div>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {screenshotUrl && (
                           <div style={styles.screenshotBlock}>
@@ -1129,7 +1159,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                         
                         {ref.proposed_fix && (
                           <div style={styles.proposedFixBlock}>
-                            <div style={styles.codeBlockHeaderFix}>AI Code Review Proposed Fix</div>
+                            <div style={styles.codeBlockHeaderFix}>AI Code Correlation Proposed Fix</div>
                             <pre style={styles.codeTextFix}>{ref.proposed_fix}</pre>
                           </div>
                         )}
@@ -1845,6 +1875,48 @@ const styles = {
     fontSize: '0.7rem',
     color: 'var(--text-dim)',
     wordBreak: 'break-all',
+  },
+  traceChainBlock: {
+    marginBottom: '16px',
+    backgroundColor: 'rgba(99, 102, 241, 0.04)',
+    border: '1px solid rgba(99, 102, 241, 0.15)',
+    borderRadius: '10px',
+    padding: '12px 16px',
+  },
+  traceChainFlow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
+    marginTop: '10px',
+  },
+  traceStep: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '8px',
+    padding: '8px 12px',
+    minWidth: '120px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  },
+  traceLayer: {
+    fontSize: '0.62rem',
+    textTransform: 'uppercase',
+    color: '#818cf8',
+    fontWeight: '700',
+    letterSpacing: '0.05em',
+    marginBottom: '4px',
+  },
+  traceValue: {
+    fontSize: '0.78rem',
+    fontWeight: '600',
+    color: '#fff',
+    fontFamily: 'monospace',
+    wordBreak: 'break-all',
+  },
+  traceArrow: {
+    fontSize: '1.2rem',
+    color: '#6366f1',
+    fontWeight: '700',
   },
   codeReviewCol: {
     padding: '20px',

@@ -1,5 +1,27 @@
 import React, { useMemo } from 'react';
-import { Activity, Globe, FileText, FormInput, Cpu, CheckCircle2, Clock, AlertCircle, Square } from 'lucide-react';
+import { 
+  Activity, Globe, FileText, FormInput, Cpu, CheckCircle2, Clock, AlertCircle, Square,
+  Key, ShieldCheck, Layers, Database, Shield, Eye, Smartphone, Image, Zap, Code2, Compass, Heart
+} from 'lucide-react';
+
+const AGENT_ICON_MAP = {
+  Orchestrator: Cpu,
+  RouteDiscovery: Compass,
+  HealthCheck: Heart,
+  Login: Key,
+  RolePermission: ShieldCheck,
+  UserJourney: Layers,
+  Form: FormInput,
+  API: Globe,
+  DatabaseIntegrity: Database,
+  Security: Shield,
+  Accessibility: Eye,
+  Responsive: Smartphone,
+  VisualRegression: Image,
+  Performance: Zap,
+  CodeCorrelation: Code2,
+};
+
 
 /**
  * Parses field:value pairs from agent log lines.
@@ -242,14 +264,15 @@ export default function LiveProcessMonitor({ tasks, taskDetails }) {
               <div style={styles.agentPipeline}>
                 {agent_states.map(a => {
                   const aColor = a.status === 'completed' ? '#3b82f6' : a.status === 'running' ? '#22c55e' : a.status === 'failed' ? '#ef4444' : 'var(--text-dim)';
+                  const IconComponent = AGENT_ICON_MAP[a.agent_name] || Cpu;
                   return (
                     <div
                       key={a.id}
                       style={{ ...styles.agentPill, borderColor: aColor, color: aColor }}
                       title={`${a.agent_name}: ${a.status}`}
                     >
-                      <span style={{ ...styles.agentDot, background: aColor }} />
-                      {a.agent_name.replace('_', ' ')}
+                      <IconComponent size={10} style={{ marginRight: '4px' }} />
+                      {a.agent_name.replace('Correlation', 'Corr').replace('_', ' ')}
                     </div>
                   );
                 })}
