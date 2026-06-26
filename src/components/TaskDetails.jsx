@@ -16,6 +16,15 @@ function getScreenshotUrl(screenshotPath) {
   return `${API_BASE}/screenshots/${encodeURIComponent(taskId)}/${encodeURIComponent(filename)}`;
 }
 
+function getVideoUrl(videoPath) {
+  if (!videoPath) return null;
+  const parts = videoPath.replace(/\\/g, '/').split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+  const taskId = parts[parts.length - 2];
+  const filename = parts[parts.length - 1];
+  return `${API_BASE}/videos/${encodeURIComponent(taskId)}/${encodeURIComponent(filename)}`;
+}
+
 // ── Dummy data map ──────────────────────────────────────────────────────────
 const DUMMY_MAP = {
   first_name:'John', firstname:'John', fname:'John',
@@ -156,6 +165,12 @@ function findTestScreenshot(testId, errors) {
   if (!testId || !errors) return null;
   const linked = errors.find(e => e.test_case_id === testId && e.screenshot_path);
   return linked ? getScreenshotUrl(linked.screenshot_path) : null;
+}
+
+function findTestVideo(testId, errors) {
+  if (!testId || !errors) return null;
+  const linked = errors.find(e => e.test_case_id === testId && e.video_path);
+  return linked ? getVideoUrl(linked.video_path) : null;
 }
 
 export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest, activeTab = 'test-cases', setActiveTab, filterPageUrl, setFilterPageUrl }) {
@@ -973,6 +988,24 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                                       </div>
                                     );
                                   })()}
+
+                                  {/* Test Case Video */}
+                                  {(() => {
+                                    const videoUrl = findTestVideo(test.id, errors);
+                                    if (!videoUrl) return null;
+                                    return (
+                                      <div style={styles.testScreenshotBox}>
+                                        <div style={styles.dummyDataLabel}>
+                                          🎥 Test Execution Video
+                                        </div>
+                                        <video
+                                          src={videoUrl}
+                                          controls
+                                          style={styles.testScreenshotImg}
+                                        />
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               )}
                             </div>
@@ -1097,6 +1130,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                               <img src={screenshotUrl} alt="Captured failure screenshot" style={styles.screenshotImage} />
                             </div>
                           )}
+                          {activeErr.video_path && (
+                            <div style={styles.screenshotBlock}>
+                              <div style={styles.codeBlockHeader}>Failure Video Recording</div>
+                              <video src={getVideoUrl(activeErr.video_path)} controls style={styles.screenshotImage} />
+                            </div>
+                          )}
                           <Terminal size={32} color="var(--text-dim)" style={{ marginBottom: '8px' }} />
                           <div>No codebase reference mapped</div>
                           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -1149,6 +1188,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                           <div style={styles.screenshotBlock}>
                             <div style={styles.codeBlockHeader}>Failure Screenshot</div>
                             <img src={screenshotUrl} alt="Captured failure screenshot" style={styles.screenshotImage} />
+                          </div>
+                        )}
+                        {activeErr.video_path && (
+                          <div style={styles.screenshotBlock}>
+                            <div style={styles.codeBlockHeader}>Failure Video Recording</div>
+                            <video src={getVideoUrl(activeErr.video_path)} controls style={styles.screenshotImage} />
                           </div>
                         )}
                         
