@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Activity, Globe, FileText, FormInput, Cpu, CheckCircle2, Clock, AlertCircle, Square,
   Key, ShieldCheck, Layers, Database, Shield, Eye, Smartphone, Image, Zap, Code2, Compass, Heart
@@ -148,6 +148,94 @@ const STATUS_CONFIG = {
   },
 };
 
+function LiveBrowserPreview({ taskId, isRunning, currentUrl }) {
+  const [imgSrc, setImgSrc] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    if (!taskId) return;
+    
+    // Initial load
+    setImgSrc(`/api/screenshots/${taskId}/live_preview.png?t=${Date.now()}`);
+    setHasError(false);
+
+    let interval = null;
+    if (isRunning) {
+      interval = setInterval(() => {
+        setReloadKey(prev => prev + 1);
+      }, 700); // 700ms polling rate
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [taskId, isRunning]);
+
+  const currentImgUrl = React.useMemo(() => {
+    if (!taskId) return null;
+    return `/api/screenshots/${taskId}/live_preview.png?t=${Date.now()}_${reloadKey}`;
+  }, [taskId, reloadKey]);
+
+  return (
+    <div style={styles.browserWrapper}>
+      {/* macOS style titlebar */}
+      <div style={styles.browserHeader}>
+        <div style={styles.browserDots}>
+          <span style={{...styles.browserDot, backgroundColor: '#ff5f56'}} />
+          <span style={{...styles.browserDot, backgroundColor: '#ffbd2e'}} />
+          <span style={{...styles.browserDot, backgroundColor: '#27c93f'}} />
+        </div>
+        <div style={styles.browserAddressBar}>
+          <Globe size={11} color="var(--text-dim)" />
+          <span style={styles.browserAddressText}>{currentUrl || 'about:blank'}</span>
+        </div>
+        <div style={styles.browserStatus}>
+          {isRunning ? (
+            <span style={styles.browserLiveIndicator}>
+              <span style={styles.liveIndicatorDot} />
+              LIVE PREVIEW
+            </span>
+          ) : (
+            <span style={styles.browserIdleIndicator}>
+              IDLE
+            </span>
+          )}
+        </div>
+      </div>
+      
+      {/* Browser screenshot content */}
+      <div style={styles.browserBody}>
+        {(hasError || !imgSrc) && (
+          <div style={styles.browserPlaceholder}>
+            <div style={styles.spinner} className={isRunning ? "animate-spin" : ""} />
+            <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>
+              {isRunning ? 'Initializing live session...' : 'No active browser preview'}
+            </span>
+          </div>
+        )}
+        {taskId && (
+          <img
+            src={currentImgUrl}
+            alt="Live browser rendering"
+            style={{
+              ...styles.browserImg,
+              display: (hasError || !imgSrc) ? 'none' : 'block'
+            }}
+            onError={() => {
+              setHasError(true);
+            }}
+            onLoad={() => {
+              setHasError(false);
+              setImgSrc(currentImgUrl);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LiveProcessMonitor({ tasks, taskDetails }) {
   // Find the most active task (running task takes priority)
   const activeTask = useMemo(() => {
@@ -225,105 +313,124 @@ export default function LiveProcessMonitor({ tasks, taskDetails }) {
 
       {/* Content grid */}
       <div style={styles.contentGrid}>
-        {/* Col 1: URL + Page */}
-        <div style={styles.infoCol}>
-          <div style={styles.infoBlock}>
-            <div style={styles.infoLabel}>
-              <Globe size={12} color="var(--text-dim)" />
-              Testing URL
-            </div>
-            <div style={styles.infoValue} title={displayTask.url}>
-              {displayTask.url}
-            </div>
-          </div>
+        {/* Left Column: Metrics & Logs */}
+        <div style={styles.leftColumn}>
+          {/* Top Row: Info + Form inputs */}
+          <div style={styles.detailsRow}>
+            {/* Col 1: URL + Page */}
+            <div style={styles.infoCol}>
+              <div style={styles.infoBlock}>
+                <div style={styles.infoLabel}>
+                  <Globe size={12} color="var(--text-dim)" />
+                  Testing URL
+                </div>
+                <div style={styles.infoValue} title={displayTask.url}>
+                  {displayTask.url}
+                </div>
+              </div>
 
-          {currentPage && (
-            <div style={styles.infoBlock}>
-              <div style={styles.infoLabel}>
-                <FileText size={12} color="var(--text-dim)" />
-                Current Page
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ ...styles.pageKeywordBadge, borderColor: config.color, color: config.color }}>
-                  {pageName}
-                </span>
-                <span style={styles.pageUrlSmall} title={currentPage}>
-                  {currentPage.replace(/^https?:\/\//, '')}
-                </span>
-              </div>
-            </div>
-          )}
+              {currentPage && (
+                <div style={styles.infoBlock}>
+                  <div style={styles.infoLabel}>
+                    <FileText size={12} color="var(--text-dim)" />
+                    Current Page
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ ...styles.pageKeywordBadge, borderColor: config.color, color: config.color }}>
+                      {pageName}
+                    </span>
+                    <span style={styles.pageUrlSmall} title={currentPage}>
+                      {currentPage.replace(/^https?:\/\//, '')}
+                    </span>
+                  </div>
+                </div>
+              )}
 
-          {/* Agent pipeline status */}
-          {agent_states.length > 0 && (
-            <div style={styles.infoBlock}>
+              {/* Agent pipeline status */}
+              {agent_states.length > 0 && (
+                <div style={styles.infoBlock}>
+                  <div style={styles.infoLabel}>
+                    <Cpu size={12} color="var(--text-dim)" />
+                    Agent Pipeline
+                  </div>
+                  <div style={styles.agentPipeline}>
+                    {agent_states.map(a => {
+                      const aColor = a.status === 'completed' ? '#3b82f6' : a.status === 'running' ? '#22c55e' : a.status === 'failed' ? '#ef4444' : 'var(--text-dim)';
+                      const IconComponent = AGENT_ICON_MAP[a.agent_name] || Cpu;
+                      return (
+                        <div
+                          key={a.id}
+                          style={{ ...styles.agentPill, borderColor: aColor, color: aColor }}
+                          title={`${a.agent_name}: ${a.status}`}
+                        >
+                          <IconComponent size={10} style={{ marginRight: '4px' }} />
+                          {a.agent_name.replace('Correlation', 'Corr').replace('_', ' ')}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Col 2: Form data being filled */}
+            <div style={styles.formDataCol}>
               <div style={styles.infoLabel}>
-                <Cpu size={12} color="var(--text-dim)" />
-                Agent Pipeline
+                <FormInput size={12} color="var(--text-dim)" />
+                Form Data Being Inserted
               </div>
-              <div style={styles.agentPipeline}>
-                {agent_states.map(a => {
-                  const aColor = a.status === 'completed' ? '#3b82f6' : a.status === 'running' ? '#22c55e' : a.status === 'failed' ? '#ef4444' : 'var(--text-dim)';
-                  const IconComponent = AGENT_ICON_MAP[a.agent_name] || Cpu;
-                  return (
-                    <div
-                      key={a.id}
-                      style={{ ...styles.agentPill, borderColor: aColor, color: aColor }}
-                      title={`${a.agent_name}: ${a.status}`}
-                    >
-                      <IconComponent size={10} style={{ marginRight: '4px' }} />
-                      {a.agent_name.replace('Correlation', 'Corr').replace('_', ' ')}
+              {formFields.length > 0 ? (
+                <div style={styles.formFieldsTable}>
+                  {formFields.map(({ field, value }) => (
+                    <div key={field} style={styles.formFieldRow}>
+                      <span style={styles.formFieldName}>{field}</span>
+                      <span style={styles.formFieldArrow}>→</span>
+                      <span style={styles.formFieldValue}>{value}</span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              ) : (
+                <div style={styles.noFormData}>
+                  {isRunning
+                    ? <><span style={styles.noFormDot} />Waiting for form interaction data...</>
+                    : 'No form data recorded for this session.'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Row: Live log tail */}
+          {recentLogs.length > 0 && (
+            <div style={styles.logCol}>
+              <div style={styles.infoLabel}>
+                <Activity size={12} color="var(--text-dim)" />
+                Live Log
+              </div>
+              <div style={styles.logBox}>
+                {recentLogs.map((entry, i) => (
+                  <div key={i} style={styles.logLine}>
+                    <span style={styles.logAgent}>[{entry.agent}]</span>
+                    <span style={styles.logText}>{entry.line.slice(0, 120)}</span>
+                  </div>
+                ))}
+                {isRunning && <span style={styles.blinkingCursor}>▌</span>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Col 2: Form data being filled */}
-        <div style={styles.formDataCol}>
-          <div style={styles.infoLabel}>
-            <FormInput size={12} color="var(--text-dim)" />
-            Form Data Being Inserted
+        {/* Right Column: Live Browser View */}
+        <div style={styles.rightColumn}>
+          <div style={{ ...styles.infoLabel, marginBottom: '10px' }}>
+            <Eye size={12} color="var(--text-dim)" style={{ marginRight: '5px', verticalAlign: 'middle', display: 'inline-block' }} />
+            <span style={{ verticalAlign: 'middle', fontSize: '0.67rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Browser Preview</span>
           </div>
-          {formFields.length > 0 ? (
-            <div style={styles.formFieldsTable}>
-              {formFields.map(({ field, value }) => (
-                <div key={field} style={styles.formFieldRow}>
-                  <span style={styles.formFieldName}>{field}</span>
-                  <span style={styles.formFieldArrow}>→</span>
-                  <span style={styles.formFieldValue}>{value}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={styles.noFormData}>
-              {isRunning
-                ? <><span style={styles.noFormDot} />Waiting for form interaction data...</>
-                : 'No form data recorded for this session.'}
-            </div>
-          )}
+          <LiveBrowserPreview 
+            taskId={displayTask.id} 
+            isRunning={isRunning} 
+            currentUrl={currentPage || displayTask.url} 
+          />
         </div>
-
-        {/* Col 3: Live log tail */}
-        {recentLogs.length > 0 && (
-          <div style={styles.logCol}>
-            <div style={styles.infoLabel}>
-              <Activity size={12} color="var(--text-dim)" />
-              Live Log
-            </div>
-            <div style={styles.logBox}>
-              {recentLogs.map((entry, i) => (
-                <div key={i} style={styles.logLine}>
-                  <span style={styles.logAgent}>[{entry.agent}]</span>
-                  <span style={styles.logText}>{entry.line.slice(0, 120)}</span>
-                </div>
-              ))}
-              {isRunning && <span style={styles.blinkingCursor}>▌</span>}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -333,7 +440,9 @@ const styles = {
   monitor: {
     padding: '20px 24px',
     borderRadius: '16px',
-    border: '1px solid',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: 'transparent',
     marginBottom: '24px',
     transition: 'border-color 0.4s ease, background 0.4s ease',
   },
@@ -384,9 +493,138 @@ const styles = {
   },
   contentGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
-    gap: '20px',
+    gridTemplateColumns: '1.25fr 1fr',
+    gap: '24px',
     alignItems: 'start',
+  },
+  leftColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  detailsRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+  },
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  browserWrapper: {
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#1e293b',
+    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+  },
+  browserHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#0f172a',
+    padding: '8px 16px',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    gap: '12px',
+  },
+  browserDots: {
+    display: 'flex',
+    gap: '6px',
+    flexShrink: 0,
+  },
+  browserDot: {
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    display: 'inline-block',
+  },
+  browserAddressBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    backgroundColor: '#1e293b',
+    borderRadius: '6px',
+    padding: '4px 12px',
+    flex: 1,
+    maxWidth: '480px',
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+    border: '1px solid rgba(255,255,255,0.04)',
+  },
+  browserAddressText: {
+    fontSize: '0.72rem',
+    color: 'var(--text-muted)',
+    fontFamily: 'monospace',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  browserStatus: {
+    flexShrink: 0,
+  },
+  browserLiveIndicator: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    fontSize: '0.62rem',
+    fontWeight: '800',
+    color: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.25)',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    letterSpacing: '0.05em',
+  },
+  liveIndicatorDot: {
+    width: '5px',
+    height: '5px',
+    borderRadius: '50%',
+    backgroundColor: '#ef4444',
+    animation: 'pulse-dot 1.2s ease-in-out infinite',
+  },
+  browserIdleIndicator: {
+    fontSize: '0.62rem',
+    fontWeight: '800',
+    color: 'var(--text-dim)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    letterSpacing: '0.05em',
+  },
+  browserBody: {
+    position: 'relative',
+    width: '100%',
+    height: '320px',
+    backgroundColor: '#090d16',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  browserPlaceholder: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+    textAlign: 'center',
+    padding: '20px',
+  },
+  spinner: {
+    width: '24px',
+    height: '24px',
+    border: '2px solid rgba(255, 255, 255, 0.05)',
+    borderTop: '2px solid var(--primary)',
+    borderRadius: '50%',
+    animation: 'spin-slow 0.8s linear infinite',
+  },
+  browserImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    display: 'block',
   },
   infoCol: {
     display: 'flex',
