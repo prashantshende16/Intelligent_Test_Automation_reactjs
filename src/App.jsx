@@ -20,7 +20,7 @@ export default function App() {
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('test-cases');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [filterPageUrl, setFilterPageUrl] = useState(null);
 
   // Clear page filter when selecting another task
@@ -37,6 +37,18 @@ export default function App() {
     fetchStats();
   }, []);
 
+  // Keep refs of tasks and selectedTaskId to avoid stale closure in setInterval
+  const tasksRef = useRef(tasks);
+  const selectedTaskIdRef = useRef(selectedTaskId);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
+
+  useEffect(() => {
+    selectedTaskIdRef.current = selectedTaskId;
+  }, [selectedTaskId]);
+
   // 2. Poll when there are active tasks
   useEffect(() => {
     const hasRunningTasks = tasks.some(t => 
@@ -49,11 +61,12 @@ export default function App() {
         pollingRef.current = setInterval(() => {
           fetchTasks(false);
           fetchStats();
-          if (selectedTaskId) {
+          const currentSelectedTaskId = selectedTaskIdRef.current;
+          if (currentSelectedTaskId) {
             // Also poll details for the selected running task
-            const selectedTask = tasks.find(t => t.id === selectedTaskId);
+            const selectedTask = tasksRef.current.find(t => t.id === currentSelectedTaskId);
             if (selectedTask && ['pending', 'crawling', 'generating_test_cases', 'running_tests'].includes(selectedTask.status)) {
-              fetchDetails(selectedTaskId, false);
+              fetchDetails(currentSelectedTaskId, false);
             }
           }
         }, 2000);
@@ -64,8 +77,9 @@ export default function App() {
         pollingRef.current = null;
         
         // Final sync of details when tasks finish
-        if (selectedTaskId) {
-          fetchDetails(selectedTaskId, false);
+        const currentSelectedTaskId = selectedTaskIdRef.current;
+        if (currentSelectedTaskId) {
+          fetchDetails(currentSelectedTaskId, false);
         }
       }
     }
@@ -95,7 +109,7 @@ export default function App() {
         const data = await res.json();
         setTasks(data);
         // If nothing selected, auto-select first task
-        if (data.length > 0 && !selectedTaskId) {
+        if (data.length > 0 && !selectedTaskIdRef.current) {
           setSelectedTaskId(data[0].id);
         }
       }
@@ -157,18 +171,20 @@ export default function App() {
 
       if (createdTasks.length > 0) {
         setIsCreateModalOpen(false);
-        await fetchTasks(false);
         setSelectedTaskId(createdTasks[createdTasks.length - 1].id);
-        fetchStats();
       }
+
+      await fetchTasks(false);
+      fetchStats();
 
       if (failedTasks.length > 0) {
         alert(`Some websites could not be added:\n${failedTasks.join('\n')}`);
-      } else {
-        await fetchTasks(false);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error('Error creating task:', err);
+      return false;
     } finally {
       setIsSubmitting(false);
     }

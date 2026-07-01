@@ -1,7 +1,7 @@
 import React from 'react';
 import { Globe, Bug, ShieldCheck, HelpCircle, AlertTriangle, Lightbulb, Trash2, ArrowRight, Download, Square } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }) {
   // Format Date
@@ -140,15 +140,6 @@ export default function TaskCard({ task, isSelected, onClick, onDelete, onStop }
           <span>{task.suggestion_count}</span>
         </div>
       </div>
-      
-      {/* Styles injected to page dynamically */}
-      <style>{`
-        .selected-card {
-          background: rgba(24, 33, 61, 0.9) !important;
-          border-color: var(--border-color-glow) !important;
-          box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15) !important;
-        }
-      `}</style>
     </div>
   );
 }

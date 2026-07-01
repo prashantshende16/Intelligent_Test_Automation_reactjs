@@ -5,7 +5,7 @@ import {
   AlertTriangle, Activity, Terminal, Download, Square, Globe
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 function getScreenshotUrl(screenshotPath) {
   if (!screenshotPath) return null;
@@ -173,7 +173,7 @@ function findTestVideo(testId, errors) {
   return linked ? getVideoUrl(linked.video_path) : null;
 }
 
-export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest, activeTab = 'test-cases', setActiveTab, filterPageUrl, setFilterPageUrl }) {
+export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDetails, onStartTest, onStopTest, activeTab = 'dashboard', setActiveTab, filterPageUrl, setFilterPageUrl }) {
   const [selectedErrorId, setSelectedErrorId] = useState(null);
   const [selectedAgentId, setSelectedAgentId] = useState(null);
   const [resumeUsername, setResumeUsername] = useState('');
@@ -220,6 +220,37 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
 
   // Destructure props BEFORE any useEffect that references these variables
   const { task = {}, use_cases = [], test_cases = [], errors = [], suggestions = [], codebase, auth, auth_state, seeds, agent_states = [] } = taskDetails || {};
+
+  const passedCount = test_cases.filter(tc => tc.status === 'passed').length;
+  const failedCount = test_cases.filter(tc => tc.status === 'failed').length;
+  const totalCases = test_cases.length;
+  const successRate = totalCases > 0 ? Math.round((passedCount / totalCases) * 100) : 100;
+
+  const criticalErrors = errors.filter(e => e.severity === 'critical').length;
+  const highErrors = errors.filter(e => e.severity === 'high').length;
+  const mediumErrors = errors.filter(e => e.severity === 'medium').length;
+  const lowErrors = errors.filter(e => e.severity === 'low').length;
+  const totalErrorsCount = criticalErrors + highErrors + mediumErrors + lowErrors;
+
+  const radius = 50;
+  const strokeWidth = 10;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (successRate / 100) * circumference;
+
+  const severityConfig = [
+    { label: 'Critical', count: criticalErrors, color: '#ef4444', pct: totalErrorsCount > 0 ? (criticalErrors / totalErrorsCount) * 100 : 0 },
+    { label: 'High', count: highErrors, color: '#f97316', pct: totalErrorsCount > 0 ? (highErrors / totalErrorsCount) * 100 : 0 },
+    { label: 'Medium', count: mediumErrors, color: '#f59e0b', pct: totalErrorsCount > 0 ? (mediumErrors / totalErrorsCount) * 100 : 0 },
+    { label: 'Low', count: lowErrors, color: '#94a3b8', pct: totalErrorsCount > 0 ? (lowErrors / totalErrorsCount) * 100 : 0 }
+  ];
+
+  let cumulativePercent = 0;
+  const segments = severityConfig.map(cfg => {
+    const dashoffset = circumference - (cfg.pct / 100) * circumference;
+    const rotate = (cumulativePercent / 100) * 360;
+    cumulativePercent += cfg.pct;
+    return { ...cfg, dashoffset, rotate };
+  });
 
   const filteredTestCases = filterPageUrl
     ? test_cases.filter(tc => tc.page_url === filterPageUrl)
@@ -303,21 +334,40 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
         .filter(Boolean)
     )
   );
-  const seededPages = seeds?.seed_urls_json ? JSON.parse(seeds.seed_urls_json) : [];
+  const seededPages = (() => {
+    if (!seeds?.seed_urls_json) return [];
+    try {
+      return JSON.parse(seeds.seed_urls_json);
+    } catch (e) {
+      console.error('Failed to parse seeds:', e);
+      return [];
+    }
+  })();
   const discoveredOnlyPages = discoveredPages.filter(pageUrl => !seededPages.includes(pageUrl));
 
-  // Scroll code review into view when a new error is selected and set default selected error
+  // Scroll code review into view when a new error is selected
+  const lastSelectedErrorId = useRef(null);
   useEffect(() => {
-    if (codeReviewRef.current) {
-      codeReviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (selectedErrorId !== null && selectedErrorId !== lastSelectedErrorId.current) {
+      lastSelectedErrorId.current = selectedErrorId;
+      if (codeReviewRef.current) {
+        codeReviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
+  }, [selectedErrorId]);
+
+  useEffect(() => {
     if (filteredErrors && filteredErrors.length > 0 && selectedErrorId === null) {
       setSelectedErrorId(filteredErrors[0].id);
     }
-    if (task.status === 'failed' && orchestratorAgent && selectedAgentId !== orchestratorAgent.id) {
-      setSelectedAgentId(orchestratorAgent.id);
+  }, [filteredErrors, selectedErrorId]);
+
+  const orchestratorAgentId = orchestratorAgent?.id;
+  useEffect(() => {
+    if (task.status === 'failed' && orchestratorAgentId && selectedAgentId !== orchestratorAgentId) {
+      setSelectedAgentId(orchestratorAgentId);
     }
-  }, [selectedErrorId, errors, task.status, orchestratorAgent, selectedAgentId]);
+  }, [task.status, orchestratorAgentId, selectedAgentId]);
 
   useEffect(() => {
     if (auth) {
@@ -770,6 +820,18 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
       {/* Tabs */}
       <div id="task-details-tabs" style={styles.tabsRow}>
         <button type="button"
+          onClick={() => setActiveTab('dashboard')}
+          style={{
+            ...styles.tabButton,
+            borderBottom: activeTab === 'dashboard' ? '2px solid var(--primary)' : '2px solid transparent',
+            color: activeTab === 'dashboard' ? 'var(--text-main)' : 'var(--text-muted)',
+          }}
+        >
+          <Activity size={16} />
+          <span>Dashboard Overview</span>
+        </button>
+
+        <button type="button"
           onClick={() => setActiveTab('test-cases')}
           style={{
             ...styles.tabButton,
@@ -823,6 +885,131 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
             >
               Show All Pages
             </button>
+          </div>
+        )}
+
+        {/* TAB 0: DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <div className="animate-slide-in" style={styles.dashboardContainer}>
+            {/* Metrics Cards Grid */}
+            <div style={styles.dashboardGrid}>
+              <div style={styles.dashCard}>
+                <div style={styles.dashCardLabel}>Total Use Cases</div>
+                <div style={styles.dashCardValue}>{use_cases.length}</div>
+                <div style={styles.dashCardSub}>Planned test scenarios</div>
+              </div>
+
+              <div style={styles.dashCard}>
+                <div style={styles.dashCardLabel}>Total Test Cases</div>
+                <div style={styles.dashCardValue}>{test_cases.length}</div>
+                <div style={styles.dashCardSub}>{passedCount} passed / {failedCount} failed</div>
+              </div>
+
+              <div style={{ ...styles.dashCard, borderLeft: '3px solid var(--error)' }}>
+                <div style={styles.dashCardLabel}>Browser Errors</div>
+                <div style={{ ...styles.dashCardValue, color: 'var(--error)' }}>{filteredErrors.length}</div>
+                <div style={styles.dashCardSub}>Unique failures detected</div>
+              </div>
+
+              <div style={{ ...styles.dashCard, borderLeft: '3px solid var(--warning)' }}>
+                <div style={styles.dashCardLabel}>AI Suggestions</div>
+                <div style={{ ...styles.dashCardValue, color: 'var(--warning)' }}>{suggestions.length}</div>
+                <div style={styles.dashCardSub}>Optimization tips</div>
+              </div>
+            </div>
+
+            {/* Visual Analytics Row */}
+            <div style={styles.analyticsRow}>
+              <div className="glass-panel" style={styles.analyticsCard}>
+                <h4 style={styles.analyticsTitle}>Test Success Rate</h4>
+                <div style={styles.chartWrapper}>
+                  <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="var(--success)" strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
+                    </svg>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>{successRate}%</span>
+                      <span style={{ display: 'block', fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>PASSED</span>
+                    </div>
+                  </div>
+                  <div style={styles.chartLegend}>
+                    <div style={styles.legendItem}>
+                      <span style={{ ...styles.legendDot, backgroundColor: 'var(--success)' }} />
+                      <span>Passed: {passedCount} ({successRate}%)</span>
+                    </div>
+                    <div style={styles.legendItem}>
+                      <span style={{ ...styles.legendDot, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                      <span>Failed/Pending: {totalCases - passedCount}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={styles.analyticsCard}>
+                <h4 style={styles.analyticsTitle}>Error Severity</h4>
+                <div style={styles.chartWrapper}>
+                  <div style={{ position: 'relative', width: '120px', height: '120px' }}>
+                    <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
+                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+                      {segments.map((seg, idx) => (
+                        seg.count > 0 && (
+                          <circle
+                            key={idx}
+                            cx="60"
+                            cy="60"
+                            r={radius}
+                            fill="transparent"
+                            stroke={seg.color}
+                            strokeWidth={strokeWidth}
+                            strokeDasharray={circumference}
+                            strokeDashoffset={seg.dashoffset}
+                            style={{
+                              transformOrigin: '60px 60px',
+                              transform: `rotate(${seg.rotate}deg)`,
+                            }}
+                          />
+                        )
+                      ))}
+                    </svg>
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>{totalErrorsCount}</span>
+                      <span style={{ display: 'block', fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>ERRORS</span>
+                    </div>
+                  </div>
+                  <div style={styles.chartLegend}>
+                    {severityConfig.map((cfg, idx) => (
+                      <div key={idx} style={styles.legendItem}>
+                        <span style={{ ...styles.legendDot, backgroundColor: cfg.color }} />
+                        <span>{cfg.label}: {cfg.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Heuristic Audit overview */}
+            <div className="glass-panel" style={styles.heuristicPanel}>
+              <h4 style={styles.heuristicPanelTitle}>Heuristic Agent Audits</h4>
+              <div style={styles.heuristicTable}>
+                {agent_states.filter(a => a.agent_name !== 'Orchestrator').map(a => {
+                  const warnings = a.errors_found || 0;
+                  const barWidth = Math.min((warnings / 10) * 100, 100);
+                  return (
+                    <div key={a.id} style={styles.heuristicRow}>
+                      <span style={styles.heuristicName}>{a.agent_name.replace('_', ' ')}</span>
+                      <div style={styles.heuristicBarContainer}>
+                        <div style={{ ...styles.heuristicBar, width: `${barWidth}%`, backgroundColor: warnings > 0 ? 'var(--warning)' : 'var(--success)' }} />
+                      </div>
+                      <span style={{ ...styles.heuristicCount, color: warnings > 0 ? 'var(--warning)' : 'var(--success)' }}>
+                        {warnings} warning{warnings !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
@@ -2250,5 +2437,131 @@ const styles = {
     whiteSpace: 'nowrap',
     transition: 'var(--transition)',
     cursor: 'pointer',
+  },
+  dashboardContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
+  dashboardGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+  },
+  dashCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
+    borderLeft: '3px solid var(--primary)',
+    borderRadius: '12px',
+    padding: '18px 20px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  dashCardLabel: {
+    fontSize: '0.72rem',
+    fontWeight: '700',
+    color: 'var(--text-dim)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  dashCardValue: {
+    fontSize: '1.8rem',
+    fontWeight: '800',
+    color: 'var(--text-main)',
+    lineHeight: '1.2',
+  },
+  dashCardSub: {
+    fontSize: '0.72rem',
+    color: 'var(--text-muted)',
+  },
+  analyticsRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '20px',
+  },
+  analyticsCard: {
+    padding: '20px',
+    borderRadius: '14px',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+  },
+  analyticsTitle: {
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    color: 'var(--text-main)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '16px',
+  },
+  chartWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '30px',
+    flexWrap: 'wrap',
+  },
+  chartLegend: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  legendItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '0.8rem',
+    color: 'var(--text-dim)',
+  },
+  legendDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    display: 'inline-block',
+  },
+  heuristicPanel: {
+    padding: '20px',
+    borderRadius: '14px',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+  },
+  heuristicPanelTitle: {
+    fontSize: '0.85rem',
+    fontWeight: '700',
+    color: 'var(--text-main)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: '16px',
+  },
+  heuristicTable: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  heuristicRow: {
+    display: 'grid',
+    gridTemplateColumns: '180px 1fr 100px',
+    gap: '20px',
+    alignItems: 'center',
+  },
+  heuristicName: {
+    fontSize: '0.82rem',
+    fontWeight: '600',
+    color: 'var(--text-main)',
+    textTransform: 'capitalize',
+  },
+  heuristicBarContainer: {
+    height: '6px',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  heuristicBar: {
+    height: '100%',
+    borderRadius: '3px',
+    transition: 'width 0.6s ease',
+  },
+  heuristicCount: {
+    fontSize: '0.8rem',
+    fontWeight: '600',
+    textAlign: 'right',
   },
 };

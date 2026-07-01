@@ -349,3 +349,19 @@ body {
   transform: translateY(-1px);
 }
 
+.selected-card {
+  background: rgba(24, 33, 61, 0.9) !important;
+  border-color: var(--border-color-glow) !important;
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 900px) {
+  body {
+    padding: 12px !important;
+  }
+  .content-grid-wrapper {
+    grid-template-columns: 1fr !important;
+  }
+}
+

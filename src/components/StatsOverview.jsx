@@ -2,7 +2,7 @@ import React from 'react';
 import { Activity, ShieldAlert, CheckCircle, Lightbulb, Play, Clock, Zap, CheckCircle2 } from 'lucide-react';
 
 export default function StatsOverview({ stats }) {
-  const successRate = stats ? stats.success_rate : 100;
+  const successRate = stats ? stats.success_rate : '—';
   const totalTasks = stats ? stats.total_tasks : 0;
   const totalTestCases = stats ? stats.total_test_cases : 0;
   const totalErrors = stats ? stats.total_errors : 0;
@@ -46,7 +46,7 @@ export default function StatsOverview({ stats }) {
         </div>
         <div>
           <div style={styles.label}>Automation Success Rate</div>
-          <div style={styles.value}>{successRate}%</div>
+          <div style={styles.value}>{successRate}{successRate !== '—' ? '%' : ''}</div>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export default function StatsOverview({ stats }) {
           <ShieldAlert size={24} color={totalErrors > 0 ? "#ef4444" : "#9ca3af"} />
         </div>
         <div>
-          <div style={styles.label}>Bugs &amp; Violations Detected</div>
+          <div style={styles.label}>Bugs & Violations Detected</div>
           <div style={styles.value}>{totalErrors}</div>
         </div>
       </div>

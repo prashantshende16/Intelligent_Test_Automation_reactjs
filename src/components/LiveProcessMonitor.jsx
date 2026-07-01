@@ -20,6 +20,9 @@ const AGENT_ICON_MAP = {
   VisualRegression: Image,
   Performance: Zap,
   CodeCorrelation: Code2,
+  Pagination: Layers,
+  FilterVerification: Globe,
+  ListingTable: FormInput,
 };
 
 
@@ -69,8 +72,9 @@ function parseFormFieldsFromLogs(logText) {
  */
 function getCurrentPage(test_cases, taskStatus) {
   if (!test_cases || test_cases.length === 0) return null;
-  // Find a running test case page first
-  const running = test_cases.find(tc => tc.status === 'pending' && tc.page_url);
+  // Find a running test case page first, then fall back to pending/queued pages
+  const running = test_cases.find(tc => tc.status === 'running' && tc.page_url) ||
+                  test_cases.find(tc => tc.status === 'pending' && tc.page_url);
   if (running) return running.page_url;
   // Fall back to most recent
   const withUrl = [...test_cases].filter(tc => tc.page_url).reverse();
@@ -150,32 +154,71 @@ const STATUS_CONFIG = {
 
 function LiveBrowserPreview({ taskId, isRunning, currentUrl }) {
   const [imgSrc, setImgSrc] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!taskId) return;
     
-    // Initial load
+    // Initial fallback load
     setImgSrc(`/api/screenshots/${taskId}/live_preview.png?t=${Date.now()}`);
     setHasError(false);
 
-    let interval = null;
-    if (isRunning) {
-      interval = setInterval(() => {
-        setReloadKey(prev => prev + 1);
-      }, 700); // 700ms polling rate
+    if (!isRunning) {
+      return;
     }
 
+    let wsHost = window.location.host;
+    if (wsHost.includes('5173')) {
+      wsHost = wsHost.replace('5173', '8000');
+    }
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${wsHost}/api/ws/live-preview/${taskId}`;
+
+    let socket = null;
+    let reconnectTimeout = null;
+    
+    function connect() {
+      try {
+        socket = new WebSocket(wsUrl);
+        
+        socket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.image) {
+              setImgSrc(data.image);
+              setHasError(false);
+            }
+          } catch (err) {
+            console.error("Error parsing WebSocket message:", err);
+          }
+        };
+        
+        socket.onerror = () => {
+          setHasError(true);
+        };
+        
+        socket.onclose = () => {
+          if (isRunning) {
+            reconnectTimeout = setTimeout(connect, 2000);
+          }
+        };
+      } catch (err) {
+        console.error("WebSocket connection error:", err);
+        setHasError(true);
+      }
+    }
+
+    connect();
+
     return () => {
-      if (interval) clearInterval(interval);
+      if (socket) {
+        try {
+          socket.close();
+        } catch (e) {}
+      }
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
     };
   }, [taskId, isRunning]);
-
-  const currentImgUrl = React.useMemo(() => {
-    if (!taskId) return null;
-    return `/api/screenshots/${taskId}/live_preview.png?t=${Date.now()}_${reloadKey}`;
-  }, [taskId, reloadKey]);
 
   return (
     <div style={styles.browserWrapper}>
@@ -216,7 +259,7 @@ function LiveBrowserPreview({ taskId, isRunning, currentUrl }) {
         )}
         {taskId && (
           <img
-            src={currentImgUrl}
+            src={imgSrc}
             alt="Live browser rendering"
             style={{
               ...styles.browserImg,
@@ -224,10 +267,6 @@ function LiveBrowserPreview({ taskId, isRunning, currentUrl }) {
             }}
             onError={() => {
               setHasError(true);
-            }}
-            onLoad={() => {
-              setHasError(false);
-              setImgSrc(currentImgUrl);
             }}
           />
         )}
@@ -253,8 +292,8 @@ export default function LiveProcessMonitor({ tasks, taskDetails }) {
     agent_states = [],
   } = taskDetails || {};
 
-  // Merge task from tasks list if taskDetails is for a different task
-  const displayTask = (task && task.id && task.id === activeTask?.id) ? task : activeTask;
+  // Ensure displayTask aligns with taskDetails to prevent data mismatch
+  const displayTask = task && task.id ? task : activeTask;
 
   const isRunning = displayTask && ['crawling', 'generating_test_cases', 'running_tests', 'pending'].includes(displayTask.status);
   const config = STATUS_CONFIG[displayTask?.status] || STATUS_CONFIG.pending;
@@ -418,19 +457,6 @@ export default function LiveProcessMonitor({ tasks, taskDetails }) {
             </div>
           )}
         </div>
-
-        {/* Right Column: Live Browser View */}
-        <div style={styles.rightColumn}>
-          <div style={{ ...styles.infoLabel, marginBottom: '10px' }}>
-            <Eye size={12} color="var(--text-dim)" style={{ marginRight: '5px', verticalAlign: 'middle', display: 'inline-block' }} />
-            <span style={{ verticalAlign: 'middle', fontSize: '0.67rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Browser Preview</span>
-          </div>
-          <LiveBrowserPreview 
-            taskId={displayTask.id} 
-            isRunning={isRunning} 
-            currentUrl={currentPage || displayTask.url} 
-          />
-        </div>
       </div>
     </div>
   );
@@ -493,7 +519,7 @@ const styles = {
   },
   contentGrid: {
     display: 'grid',
-    gridTemplateColumns: '1.25fr 1fr',
+    gridTemplateColumns: '1fr',
     gap: '24px',
     alignItems: 'start',
   },

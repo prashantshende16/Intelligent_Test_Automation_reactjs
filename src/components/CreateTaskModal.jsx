@@ -75,7 +75,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -104,7 +104,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       return;
     }
 
-    if (codebasePath && codebasePath.trim() === '') {
+    if (codebasePath !== '' && codebasePath.trim() === '') {
       setCodeError('Please provide a valid codebase folder path or leave empty.');
       return;
     }
@@ -113,7 +113,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
       .map(value => value.trim())
       .filter(Boolean);
 
-    onSubmit(targetUrls, codebasePath.trim(), {
+    const success = await onSubmit(targetUrls, codebasePath.trim(), {
       is_mobile: isMobile,
       seed_urls: seedUrls
         .split(/[\n,]+/)
@@ -133,21 +133,24 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
         ? JSON.stringify(customUseCases.filter(uc => uc.title.trim() !== ""))
         : null
     });
-    setUrl('');
-    setSeedUrls('');
-    setCodebasePath('');
-    setIsMobile(false);
-    setAuthRequired(false);
-    setAuthLoginUrl('');
-    setAuthPostLoginUrl('');
-    setProtectedUrls('');
-    setAuthUsername('');
-    setAuthPassword('');
-    setAuthOtpCode('');
-    setAuthOtpHint('');
-    setAiModel('auto');
-    setUserPrompt('');
-    setCustomUseCases([]);
+
+    if (success) {
+      setUrl('');
+      setSeedUrls('');
+      setCodebasePath('');
+      setIsMobile(false);
+      setAuthRequired(false);
+      setAuthLoginUrl('');
+      setAuthPostLoginUrl('');
+      setProtectedUrls('');
+      setAuthUsername('');
+      setAuthPassword('');
+      setAuthOtpCode('');
+      setAuthOtpHint('');
+      setAiModel('auto');
+      setUserPrompt('');
+      setCustomUseCases([]);
+    }
   };
 
   return (
@@ -221,7 +224,7 @@ export default function CreateTaskModal({ isOpen, onClose, onSubmit, isSubmittin
                 style={styles.select}
               >
                 <option value="auto">Auto-Route (Based on available API Keys)</option>
-                <option value="gemini-1.5-flash">Google Gemini (gemini-1.5-flash)</option>
+                <option value="gemini-2.5-flash">Google Gemini (gemini-2.5-flash)</option>
                 <option value="gpt-4o">OpenAI ChatGPT (gpt-4o)</option>
               </select>
             </div>

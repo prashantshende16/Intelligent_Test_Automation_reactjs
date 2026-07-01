@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Download, CheckCircle2, XCircle, Clock, AlertTriangle, Lightbulb, Globe, Layers, ShieldAlert } from 'lucide-react';
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 // Derive a keyword label from a URL path segment
 function urlToKeyword(url) {
