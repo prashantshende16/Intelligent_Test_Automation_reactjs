@@ -746,11 +746,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                 <button
                   key={state.id}
                   type="button"
+                  className="agent-state-card"
                   onClick={() => setSelectedAgentId(selectedAgentId === state.id ? null : state.id)}
                   style={{
                   ...styles.agentStateCard,
                   borderLeft: isRunning ? '3px solid var(--accent)' : isCompleted ? '3px solid var(--success)' : isFailed ? '3px solid var(--error)' : '3px solid var(--text-dim)',
-                  borderColor: selectedAgentId === state.id ? 'rgba(99, 102, 241, 0.55)' : 'rgba(255, 255, 255, 0.03)',
+                  borderColor: selectedAgentId === state.id ? 'rgba(99, 102, 241, 0.55)' : undefined,
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}>
@@ -762,7 +763,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                   </div>
                   
                   {state.log_output && (
-                    <div style={styles.agentLogBox}>
+                    <div className="agent-log-box" style={styles.agentLogBox}>
                       <pre style={styles.agentLogText}>
                         {state.log_output.split('\n').filter(Boolean).slice(-2).join('\n')}
                       </pre>
@@ -779,12 +780,12 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
             })}
           </div>
           {selectedAgent && (
-            <div style={styles.agentDetailBox}>
-              <div style={styles.agentDetailHeader}>
+            <div className="agent-detail-box" style={styles.agentDetailBox}>
+              <div className="agent-detail-header" style={styles.agentDetailHeader}>
                 <span>{selectedAgent.agent_name.replace('_', ' ')} details</span>
                 <span>{selectedAgent.errors_found || 0} warning{selectedAgent.errors_found === 1 ? '' : 's'}</span>
               </div>
-              <pre style={styles.agentDetailLog}>
+              <pre className="agent-detail-log" style={styles.agentDetailLog}>
                 {selectedAgent.log_output || 'No log output yet.'}
               </pre>
             </div>
@@ -925,11 +926,11 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                 <div style={styles.chartWrapper}>
                   <div style={{ position: 'relative', width: '120px', height: '120px' }}>
                     <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
-                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="var(--border-color)" strokeWidth={strokeWidth} />
                       <circle cx="60" cy="60" r={radius} fill="transparent" stroke="var(--success)" strokeWidth={strokeWidth} strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" />
                     </svg>
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>{successRate}%</span>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>{successRate}%</span>
                       <span style={{ display: 'block', fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>PASSED</span>
                     </div>
                   </div>
@@ -939,7 +940,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                       <span>Passed: {passedCount} ({successRate}%)</span>
                     </div>
                     <div style={styles.legendItem}>
-                      <span style={{ ...styles.legendDot, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+                      <span style={{ ...styles.legendDot, backgroundColor: 'var(--border-color)' }} />
                       <span>Failed/Pending: {totalCases - passedCount}</span>
                     </div>
                   </div>
@@ -951,7 +952,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                 <div style={styles.chartWrapper}>
                   <div style={{ position: 'relative', width: '120px', height: '120px' }}>
                     <svg width="120" height="120" viewBox="0 0 120 120" style={{ transform: 'rotate(-90deg)' }}>
-                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+                      <circle cx="60" cy="60" r={radius} fill="transparent" stroke="var(--border-color)" strokeWidth={strokeWidth} />
                       {segments.map((seg, idx) => (
                         seg.count > 0 && (
                           <circle
@@ -973,7 +974,7 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                       ))}
                     </svg>
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fff' }}>{totalErrorsCount}</span>
+                      <span style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--text-main)' }}>{totalErrorsCount}</span>
                       <span style={{ display: 'block', fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>ERRORS</span>
                     </div>
                   </div>
@@ -1975,9 +1976,9 @@ const styles = {
   },
   agentPanel: {
     padding: '16px',
-    backgroundColor: 'rgba(16, 22, 42, 0.4)',
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
+    border: '1px solid var(--border-color)',
   },
   agentPanelTitle: {
     fontSize: '0.8rem',
@@ -2403,9 +2404,9 @@ const styles = {
   },
   pagesTestedPanel: {
     padding: '16px',
-    backgroundColor: 'rgba(16, 22, 42, 0.4)',
+    backgroundColor: 'var(--bg-surface)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
+    border: '1px solid var(--border-color)',
     marginTop: '16px',
   },
   pagesList: {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Terminal, Activity, ShieldCheck, Bug, Lightbulb, Compass, Globe } from 'lucide-react';
+import { Plus, Terminal, Activity, ShieldCheck, Bug, Lightbulb, Compass, Globe, Sun, Moon } from 'lucide-react';
 import StatsOverview from './components/StatsOverview';
 import TaskCard from './components/TaskCard';
 import TaskDetails from './components/TaskDetails';
@@ -22,6 +22,16 @@ export default function App() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [filterPageUrl, setFilterPageUrl] = useState(null);
+  const [theme, setTheme] = useState('light');
+
+  // Sync theme with body class
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-theme');
+    } else {
+      document.body.classList.remove('light-theme');
+    }
+  }, [theme]);
 
   // Clear page filter when selecting another task
   useEffect(() => {
@@ -108,10 +118,6 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setTasks(data);
-        // If nothing selected, auto-select first task
-        if (data.length > 0 && !selectedTaskIdRef.current) {
-          setSelectedTaskId(data[0].id);
-        }
       }
     } catch (err) {
       console.error('Error fetching tasks:', err);
@@ -261,39 +267,39 @@ export default function App() {
             <span style={styles.brandSub}>AI Agent Website Test Automation Suite</span>
           </div>
         </div>
-        <button 
-          onClick={() => setIsCreateModalOpen(true)} 
-          className="btn-primary"
-        >
-          <Plus size={18} />
-          <span>Test New Website</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} 
+            className="btn-secondary"
+            style={styles.themeToggle}
+            title={theme === 'light' ? 'Switch to Dark Theme' : 'Switch to Light Theme'}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <button 
+            onClick={() => setIsCreateModalOpen(true)} 
+            className="btn-primary"
+          >
+            <Plus size={18} />
+            <span>Test New Website</span>
+          </button>
+        </div>
       </header>
 
-      {/* Live Process Monitor */}
-      <LiveProcessMonitor tasks={tasks} taskDetails={taskDetails} />
+      {selectedTaskId === null ? (
+        // Mode A: Dashboard View (Full-Screen Project List)
+        <div className="animate-fade-in" style={styles.dashboardView}>
+          {/* Global stats review */}
+          <StatsOverview stats={stats} />
 
-      {/* Global stats review */}
-      <StatsOverview stats={stats} />
-
-      {/* Pages Under Test */}
-      <PagesUnderTest 
-        taskDetails={taskDetails} 
-        tasks={tasks} 
-        setActiveTab={setActiveTab} 
-        setFilterPageUrl={setFilterPageUrl} 
-      />
-
-      {/* Main split dashboard view */}
-      <div style={styles.layoutGrid}>
-        {/* Sidebar list */}
-        <div style={styles.sidebar}>
-          <div style={styles.sidebarTitleRow}>
-            <h3 style={styles.sidebarTitle}>Enrolled Websites</h3>
-            <span style={styles.sidebarCount}>{tasks.length} Total</span>
+          <div style={styles.dashboardHeader}>
+            <div>
+              <h2 style={styles.dashboardTitle}>Test Automation Projects</h2>
+              <p style={styles.dashboardSub}>{tasks.length} sites registered</p>
+            </div>
           </div>
-          
-          <div style={styles.listContainer}>
+
+          <div style={styles.dashboardGrid}>
             {isListLoading ? (
               <div style={styles.listSpinnerBox}>
                 <div style={styles.listSpinner} />
@@ -310,38 +316,86 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              tasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  isSelected={task.id === selectedTaskId}
-                  onClick={() => setSelectedTaskId(task.id)}
-                  onDelete={handleDeleteTask}
-                  onStop={handleStopTask}
-                />
-              ))
+              <>
+                {tasks.map(task => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isSelected={false}
+                    onClick={() => setSelectedTaskId(task.id)}
+                    onDelete={handleDeleteTask}
+                    onStop={handleStopTask}
+                  />
+                ))}
+                {/* Interactive Add New Website Card */}
+                <div 
+                  className="glass-panel glass-panel-interactive" 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  style={styles.addCard}
+                >
+                  <div style={styles.addCardIcon}>
+                    <Plus size={24} color="var(--primary)" />
+                  </div>
+                  <h3 style={styles.addCardTitle}>Test New Website</h3>
+                  <p style={styles.addCardSub}>Enroll a new domain for AI-agent testing</p>
+                </div>
+              </>
             )}
           </div>
         </div>
+      ) : (
+        // Mode B: Project Detail View (Workspace & Active Monitor)
+        <div className="animate-fade-in" style={styles.detailView}>
+          {/* Back button and page title row */}
+          <div style={styles.detailHeader}>
+            <button 
+              onClick={() => setSelectedTaskId(null)} 
+              className="btn-secondary"
+              style={styles.backBtn}
+            >
+              ← Back to Dashboard
+            </button>
+            {taskDetails?.task && (
+              <div style={styles.detailTitleWrapper}>
+                <Globe size={16} color="var(--primary)" />
+                <span style={styles.detailTitle}>{taskDetails.task.url}</span>
+                <span className={`status-badge status-${taskDetails.task.status}`} style={{ fontSize: '0.65rem', marginLeft: '6px' }}>
+                  {taskDetails.task.status.replace(/_/g, ' ')}
+                </span>
+              </div>
+            )}
+          </div>
 
-        {/* Details diagnostics workspace */}
-        <main className="glass-panel" style={styles.workspace}>
-          <TaskDetails 
+          {/* Live Process Monitor */}
+          <LiveProcessMonitor tasks={tasks} taskDetails={taskDetails} />
+
+          {/* Pages Under Test */}
+          <PagesUnderTest 
             taskDetails={taskDetails} 
-            isDetailsLoading={isDetailsLoading}
-            onStartTest={handleStartTest}
-            onStopTest={handleStopTask}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            filterPageUrl={filterPageUrl}
-            setFilterPageUrl={setFilterPageUrl}
-            onRefreshDetails={() => {
-              fetchDetails(selectedTaskId, false);
-              fetchTasks(false);
-            }}
+            tasks={tasks} 
+            setActiveTab={setActiveTab} 
+            setFilterPageUrl={setFilterPageUrl} 
           />
-        </main>
-      </div>
+
+          {/* Details diagnostics workspace */}
+          <main className="glass-panel" style={styles.workspaceFull}>
+            <TaskDetails 
+              taskDetails={taskDetails} 
+              isDetailsLoading={isDetailsLoading}
+              onStartTest={handleStartTest}
+              onStopTest={handleStopTask}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              filterPageUrl={filterPageUrl}
+              setFilterPageUrl={setFilterPageUrl}
+              onRefreshDetails={() => {
+                fetchDetails(selectedTaskId, false);
+                fetchTasks(false);
+              }}
+            />
+          </main>
+        </div>
+      )}
 
       {/* Task Creation popover */}
       <CreateTaskModal
@@ -356,9 +410,8 @@ export default function App() {
 
 const styles = {
   appContainer: {
-    maxWidth: '1240px',
-    margin: '0 auto',
-    padding: '30px 20px 40px 20px',
+    width: '100%',
+    padding: '30px 40px 40px 40px',
     display: 'flex',
     flexDirection: 'column',
     minHeight: '100vh',
@@ -471,6 +524,117 @@ const styles = {
     minHeight: '480px',
     maxHeight: 'calc(100vh - 280px)',
     overflowY: 'auto',
+  },
+  // Dashboard Specific Styles
+  dashboardView: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px',
+  },
+  dashboardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: '10px',
+    marginBottom: '4px',
+  },
+  dashboardTitle: {
+    fontSize: '1.5rem',
+    fontWeight: '800',
+    fontFamily: 'var(--font-title)',
+    color: 'var(--text-main)',
+  },
+  dashboardSub: {
+    fontSize: '0.85rem',
+    color: 'var(--text-muted)',
+    marginTop: '2px',
+  },
+  dashboardGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+    gap: '20px',
+    marginTop: '10px',
+  },
+  addCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '40px 20px',
+    textAlign: 'center',
+    minHeight: '220px',
+    border: '2px dashed rgba(99, 102, 241, 0.25)',
+    background: 'rgba(99, 102, 241, 0.02)',
+    borderRadius: '16px',
+    cursor: 'pointer',
+    transition: 'var(--transition)',
+  },
+  addCardIcon: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '16px',
+    border: '1px solid rgba(99, 102, 241, 0.2)',
+    transition: 'var(--transition)',
+  },
+  addCardTitle: {
+    fontSize: '1.05rem',
+    fontWeight: '700',
+    fontFamily: 'var(--font-title)',
+    color: 'var(--text-main)',
+    marginBottom: '6px',
+  },
+  addCardSub: {
+    fontSize: '0.8rem',
+    color: 'var(--text-muted)',
+    maxWidth: '220px',
+    lineHeight: '1.4',
+  },
+  // Detail View Specific Styles
+  detailView: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  detailHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '20px',
+    marginBottom: '10px',
+  },
+  backBtn: {
+    padding: '8px 16px',
+    fontSize: '0.85rem',
+  },
+  detailTitleWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '10px',
+    padding: '8px 16px',
+    backdropFilter: 'var(--glass-blur)',
+  },
+  detailTitle: {
+    fontWeight: '700',
+    fontSize: '0.9rem',
+    color: 'var(--text-main)',
+    fontFamily: 'var(--font-title)',
+  },
+  themeToggle: {
+    padding: '10px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '10px',
+    cursor: 'pointer',
+    transition: 'var(--transition)',
   },
 };
 // Add media query handling in standard React app or via simple viewport resize checks

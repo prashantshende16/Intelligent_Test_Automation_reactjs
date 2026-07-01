@@ -33,6 +33,177 @@
   --glass-blur: blur(16px);
 }
 
+/* Light Theme Variables */
+body.light-theme {
+  --bg-main: #f0f6ff; /* Ice Blue / White Light - provides a clean, premium background */
+  --bg-surface: #ffffff; /* Crisp white panels */
+  --bg-surface-hover: #ffffff;
+  --border-color: rgba(15, 45, 89, 0.08); /* Navy-tinted border */
+  --border-color-glow: rgba(99, 102, 241, 0.35);
+  
+  --primary: #4f46e5;
+  --primary-glow: rgba(79, 70, 229, 0.08);
+  --primary-hover: #3730a3;
+  
+  --accent: #0d9488;
+  --accent-glow: rgba(13, 148, 136, 0.08);
+  
+  --success: #059669;
+  --success-glow: rgba(5, 150, 105, 0.08);
+  --warning: #d97706;
+  --warning-glow: rgba(217, 119, 6, 0.08);
+  --error: #dc2626;
+  --error-glow: rgba(220, 38, 38, 0.08);
+  
+  --text-main: #0f2d59; /* Deep Navy Blue */
+  --text-muted: #1e3a8a; /* Navy Blue */
+  --text-dim: #3b82f6; /* Blue */
+  
+  --shadow: 0 4px 20px -2px rgba(15, 45, 89, 0.06), 0 2px 8px -1px rgba(15, 45, 89, 0.03);
+}
+
+/* Light Theme Overrides */
+body.light-theme {
+  background-color: #f0f6ff;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 40%),
+    radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.04) 0px, transparent 40%),
+    radial-gradient(at 50% 50%, rgba(224, 242, 254, 0.4) 0px, transparent 100%);
+}
+
+body.light-theme .btn-secondary {
+  background: rgba(15, 45, 89, 0.04);
+  border-color: rgba(15, 45, 89, 0.08);
+  color: #0f2d59;
+}
+
+body.light-theme .btn-secondary:hover {
+  background: rgba(15, 45, 89, 0.08);
+  border-color: rgba(15, 45, 89, 0.12);
+}
+
+body.light-theme .page-action-row {
+  background: rgba(15, 45, 89, 0.02);
+  border-color: rgba(15, 45, 89, 0.04);
+}
+
+body.light-theme .page-action-btn {
+  background: rgba(15, 45, 89, 0.03);
+  border-color: rgba(15, 45, 89, 0.06);
+  color: #1e3a8a;
+}
+
+/* High Contrast Status Badges in Light Mode */
+body.light-theme .status-badge {
+  border-width: 1px;
+  border-style: solid;
+}
+body.light-theme .status-pending {
+  background-color: rgba(107, 114, 128, 0.08);
+  color: #374151;
+  border-color: rgba(107, 114, 128, 0.2);
+}
+body.light-theme .status-planned {
+  background-color: rgba(99, 102, 241, 0.08);
+  color: #4338ca;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+body.light-theme .status-running,
+body.light-theme .status-crawling {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+body.light-theme .status-generating_test_cases {
+  background-color: rgba(139, 92, 246, 0.08);
+  color: #6d28d9;
+  border-color: rgba(139, 92, 246, 0.2);
+}
+body.light-theme .status-running_tests {
+  background-color: rgba(20, 184, 166, 0.08);
+  color: #0f766e;
+  border-color: rgba(20, 184, 166, 0.2);
+}
+body.light-theme .status-completed {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+body.light-theme .status-failed {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+body.light-theme .status-stopped {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+/* Light Mode Card and Input Background Overrides */
+body.light-theme div[style*="rgba(255, 255, 255, 0.03)"],
+body.light-theme button[style*="rgba(255, 255, 255, 0.03)"] {
+  background-color: rgba(15, 45, 89, 0.03) !important;
+}
+
+body.light-theme div[style*="rgba(255, 255, 255, 0.01)"] {
+  background-color: rgba(15, 45, 89, 0.01) !important;
+}
+
+body.light-theme div[style*="rgba(0, 0, 0, 0.2)"] {
+  background-color: rgba(15, 45, 89, 0.04) !important;
+}
+
+body.light-theme span[style*="#a5f3fc"] {
+  color: #0891b2 !important;
+}
+
+body.light-theme span[style*="#a5b4fc"] {
+  color: #4338ca !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* Pre/Code, terminal blocks, and mock browser frames in light mode */
+body.light-theme div[style*="#070913"],
+body.light-theme div[style*="#0a0d1a"],
+body.light-theme div[style*="#060912"],
+body.light-theme div[style*="#0f172a"],
+body.light-theme pre[style*="#070913"],
+body.light-theme pre[style*="#0a0d1a"],
+body.light-theme pre[style*="#060912"] {
+  background-color: #f0f6ff !important;
+  color: #0f2d59 !important;
+  border: 1px solid rgba(15, 45, 89, 0.06) !important;
+}
+
+/* Specific Sub-Agent Elements in Light Mode */
+body.light-theme .agent-state-card {
+  background-color: rgba(15, 45, 89, 0.03) !important;
+  border: 1px solid rgba(15, 45, 89, 0.08) !important;
+  color: #0f2d59 !important;
+}
+body.light-theme .agent-state-card:hover {
+  background-color: rgba(15, 45, 89, 0.06) !important;
+}
+body.light-theme .agent-log-box {
+  background-color: rgba(15, 45, 89, 0.04) !important;
+  border-color: rgba(15, 45, 89, 0.08) !important;
+}
+body.light-theme .agent-detail-box {
+  background-color: rgba(15, 45, 89, 0.03) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+}
+body.light-theme .agent-detail-header {
+  color: #0f2d59 !important;
+}
+body.light-theme .agent-detail-log {
+  background-color: rgba(15, 45, 89, 0.02) !important;
+  color: #1e3a8a !important;
+  border: 1px solid rgba(15, 45, 89, 0.05) !important;
+}
+
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -60,7 +231,7 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(16, 22, 42, 0.5);
+  background: var(--bg-main);
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(99, 102, 241, 0.3);
