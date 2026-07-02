@@ -54,6 +54,33 @@
   /* Steps panel variables */
   --steps-bg: rgba(16, 22, 42, 0.5);
   --steps-border: rgba(255, 255, 255, 0.02);
+
+  /* Code Preview variables */
+  --code-preview-bg: #070913;
+  --code-preview-border: rgba(255, 255, 255, 0.05);
+  --code-preview-label-bg: rgba(255, 255, 255, 0.03);
+  --code-snippet-bg: #0a0d1a;
+  --code-snippet-border: rgba(255, 255, 255, 0.04);
+  --code-snippet-color: #93c5fd;
+  --code-fix-bg: #081c15;
+  --code-fix-color: #a7f3d0;
+
+  /* Trace Chain variables */
+  --trace-step-bg: rgba(255, 255, 255, 0.03);
+  --trace-step-border: rgba(255, 255, 255, 0.08);
+  --trace-layer-color: #818cf8;
+  --trace-value-color: #ffffff;
+  --trace-arrow-color: #6366f1;
+
+  /* Error List Item variables */
+  --error-item-border: rgba(255, 255, 255, 0.08);
+  --error-item-bg: rgba(255, 255, 255, 0.01);
+  --error-item-active-border: var(--primary);
+  --error-item-active-bg: rgba(99, 102, 241, 0.04);
+
+  /* Failure Details variables */
+  --failure-details-bg: rgba(239, 68, 68, 0.03);
+  --failure-details-border: rgba(239, 68, 68, 0.12);
 }
 
 /* Light Theme Variables */
@@ -106,6 +133,33 @@ body.light-theme {
   /* Steps panel overrides */
   --steps-bg: rgba(15, 45, 89, 0.04);
   --steps-border: rgba(15, 45, 89, 0.06);
+
+  /* Code Preview variables */
+  --code-preview-bg: #ffffff;
+  --code-preview-border: rgba(15, 45, 89, 0.15);
+  --code-preview-label-bg: rgba(15, 45, 89, 0.04);
+  --code-snippet-bg: #f8fafc;
+  --code-snippet-border: rgba(15, 45, 89, 0.15);
+  --code-snippet-color: #0f2d59;
+  --code-fix-bg: #f0fdf4;
+  --code-fix-color: #166534;
+
+  /* Trace Chain variables */
+  --trace-step-bg: rgba(15, 45, 89, 0.04);
+  --trace-step-border: rgba(15, 45, 89, 0.15);
+  --trace-layer-color: #4f46e5;
+  --trace-value-color: #0f2d59;
+  --trace-arrow-color: #4f46e5;
+
+  /* Error List Item overrides */
+  --error-item-border: rgba(15, 45, 89, 0.15);
+  --error-item-bg: rgba(15, 45, 89, 0.02);
+  --error-item-active-border: var(--primary);
+  --error-item-active-bg: rgba(79, 70, 229, 0.08);
+
+  /* Failure Details overrides */
+  --failure-details-bg: rgba(239, 68, 68, 0.03);
+  --failure-details-border: rgba(239, 68, 68, 0.15);
 }
 
 /* Light Theme Overrides */
@@ -202,18 +256,7 @@ body.light-theme div[style*="rgba(0, 0, 0, 0.2)"] {
 
 /* Brittle hex-matching selectors removed in favor of semantic CSS variables */
 
-/* Pre/Code, terminal blocks, and mock browser frames in light mode */
-body.light-theme div[style*="#070913"],
-body.light-theme div[style*="#0a0d1a"],
-body.light-theme div[style*="#060912"],
-body.light-theme div[style*="#0f172a"],
-body.light-theme pre[style*="#070913"],
-body.light-theme pre[style*="#0a0d1a"],
-body.light-theme pre[style*="#060912"] {
-  background-color: #f0f6ff !important;
-  color: #0f2d59 !important;
-  border: 1px solid rgba(15, 45, 89, 0.06) !important;
-}
+/* Obsolete hex-matching override selectors removed in favor of semantic CSS variables */
 
 /* Specific Sub-Agent Elements in Light Mode */
 body.light-theme .agent-state-card {
@@ -502,6 +545,38 @@ body {
 .priority-low { background: rgba(107, 114, 128, 0.2); color: #d1d5db; }
 .priority-medium { background: rgba(99, 102, 241, 0.2); color: #c7d2fe; }
 .priority-high { background: rgba(20, 184, 166, 0.2); color: #99f6e4; }
+
+/* Light Mode Severity Badges */
+body.light-theme .severity-low {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+body.light-theme .severity-medium {
+  background: rgba(245, 158, 11, 0.1);
+  color: #b45309;
+}
+body.light-theme .severity-high {
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+}
+body.light-theme .severity-critical {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* Light Mode Priority Badges */
+body.light-theme .priority-low {
+  background: rgba(107, 114, 128, 0.1);
+  color: #374151;
+}
+body.light-theme .priority-medium {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4338ca;
+}
+body.light-theme .priority-high {
+  background: rgba(20, 184, 166, 0.1);
+  color: #0f766e;
+}
 
 /* PagesUnderTest action buttons */
 .page-action-row {

@@ -1239,8 +1239,8 @@ export default function TaskDetails({ taskDetails, isDetailsLoading, onRefreshDe
                         className="glass-panel animate-fade-in"
                         style={{
                           ...styles.errorListItem,
-                          border: selectedErrorId === err.id ? '1px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.08)',
-                          backgroundColor: selectedErrorId === err.id ? 'rgba(99, 102, 241, 0.04)' : 'rgba(255, 255, 255, 0.01)',
+                          border: selectedErrorId === err.id ? '1px solid var(--error-item-active-border)' : '1px solid var(--error-item-border)',
+                          backgroundColor: selectedErrorId === err.id ? 'var(--error-item-active-bg)' : 'var(--error-item-bg)',
                           cursor: 'pointer',
                           width: '100%',
                           textAlign: 'left'
@@ -1854,6 +1854,10 @@ const styles = {
     flexDirection: 'column',
     gap: '12px',
     marginBottom: '16px',
+    backgroundColor: 'var(--failure-details-bg)',
+    border: '1px solid var(--failure-details-border)',
+    borderRadius: '10px',
+    padding: '16px',
   },
   failureDetailGrid: {
     display: 'grid',
@@ -2124,8 +2128,8 @@ const styles = {
     marginTop: '10px',
   },
   traceStep: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'var(--trace-step-bg)',
+    border: '1px solid var(--trace-step-border)',
     borderRadius: '8px',
     padding: '8px 12px',
     minWidth: '120px',
@@ -2134,7 +2138,7 @@ const styles = {
   traceLayer: {
     fontSize: '0.62rem',
     textTransform: 'uppercase',
-    color: '#818cf8',
+    color: 'var(--trace-layer-color)',
     fontWeight: '700',
     letterSpacing: '0.05em',
     marginBottom: '4px',
@@ -2142,20 +2146,21 @@ const styles = {
   traceValue: {
     fontSize: '0.78rem',
     fontWeight: '600',
-    color: '#fff',
+    color: 'var(--trace-value-color)',
     fontFamily: 'monospace',
     wordBreak: 'break-all',
   },
   traceArrow: {
     fontSize: '1.2rem',
-    color: '#6366f1',
+    color: 'var(--trace-arrow-color)',
     fontWeight: '700',
   },
   codeReviewCol: {
     padding: '20px',
     maxHeight: '480px',
     overflowY: 'auto',
-    backgroundColor: '#070913',
+    backgroundColor: 'var(--code-preview-bg)',
+    border: '1px solid var(--code-preview-border)',
   },
   noCodeRefBox: {
     display: 'flex',
@@ -2164,7 +2169,7 @@ const styles = {
     justifyContent: 'center',
     textAlign: 'center',
     padding: '60px 20px',
-    color: 'var(--text-dim)',
+    color: 'var(--text-muted)',
     fontSize: '0.85rem',
   },
   codeReviewDetail: {
@@ -2173,7 +2178,7 @@ const styles = {
     gap: '16px',
   },
   codeReviewHeader: {
-    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    borderBottom: '1px solid var(--code-preview-border)',
     paddingBottom: '10px',
   },
   codeFileLabel: {
@@ -2192,7 +2197,7 @@ const styles = {
   codeLinesLabel: {
     fontSize: '0.7rem',
     color: 'var(--text-dim)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'var(--code-preview-label-bg)',
     padding: '2px 6px',
     borderRadius: '4px',
     fontWeight: '600',
@@ -2213,8 +2218,8 @@ const styles = {
     width: '100%',
     maxHeight: '260px',
     objectFit: 'contain',
-    backgroundColor: '#0a0d1a',
-    border: '1px solid rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'var(--code-snippet-bg)',
+    border: '1px solid var(--code-snippet-border)',
     borderRadius: '8px',
   },
   codeBlockHeader: {
@@ -2225,11 +2230,11 @@ const styles = {
     letterSpacing: '0.05em',
   },
   codeText: {
-    backgroundColor: '#0a0d1a',
-    border: '1px solid rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'var(--code-snippet-bg)',
+    border: '1px solid var(--code-snippet-border)',
     padding: '12px',
     borderRadius: '8px',
-    color: '#93c5fd',
+    color: 'var(--code-snippet-color)',
     fontSize: '0.75rem',
     fontFamily: 'monospace',
     lineHeight: '1.4',
@@ -2240,8 +2245,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    backgroundColor: 'rgba(16, 185, 129, 0.02)',
-    border: '1px dashed rgba(16, 185, 129, 0.2)',
+    backgroundColor: 'var(--success-glow)',
+    border: '1px dashed var(--success)',
     borderRadius: '8px',
     padding: '12px',
   },
@@ -2253,10 +2258,10 @@ const styles = {
     letterSpacing: '0.05em',
   },
   codeTextFix: {
-    backgroundColor: '#081c15',
+    backgroundColor: 'var(--code-fix-bg)',
     padding: '10px',
     borderRadius: '6px',
-    color: '#a7f3d0',
+    color: 'var(--code-fix-color)',
     fontSize: '0.75rem',
     fontFamily: 'monospace',
     lineHeight: '1.4',
