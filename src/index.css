@@ -31,6 +31,29 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --glass-blur: blur(16px);
+
+  /* Diagnostic Error Panel variables */
+  --error-bg: rgba(239, 68, 68, 0.06);
+  --error-border: rgba(239, 68, 68, 0.2);
+  --error-content-color: #fca5a5;
+
+  /* Dummy Data Table variables */
+  --dummy-box-bg: rgba(99, 102, 241, 0.04);
+  --dummy-box-border: rgba(99, 102, 241, 0.18);
+  --dummy-label-color: #a5b4fc;
+  --dummy-header-bg: rgba(99, 102, 241, 0.1);
+  --dummy-row-bg: rgba(0, 0, 0, 0.15);
+  --dummy-row-border: rgba(255, 255, 255, 0.02);
+  --dummy-field-color: #93c5fd;
+  --dummy-field-bg: rgba(59, 130, 246, 0.1);
+  --dummy-value-color: #a5f3fc;
+  --dummy-badge-color: #c4b5fd;
+  --dummy-badge-bg: rgba(167, 139, 250, 0.12);
+  --dummy-badge-border: rgba(167, 139, 250, 0.2);
+
+  /* Steps panel variables */
+  --steps-bg: rgba(16, 22, 42, 0.5);
+  --steps-border: rgba(255, 255, 255, 0.02);
 }
 
 /* Light Theme Variables */
@@ -60,6 +83,29 @@ body.light-theme {
   --text-dim: #3b82f6; /* Blue */
   
   --shadow: 0 4px 20px -2px rgba(15, 45, 89, 0.06), 0 2px 8px -1px rgba(15, 45, 89, 0.03);
+
+  /* Diagnostic Error Panel overrides */
+  --error-bg: rgba(220, 38, 38, 0.05);
+  --error-border: rgba(220, 38, 38, 0.15);
+  --error-content-color: #991b1b;
+
+  /* Dummy Data Table overrides */
+  --dummy-box-bg: rgba(79, 70, 229, 0.04);
+  --dummy-box-border: rgba(79, 70, 229, 0.18);
+  --dummy-label-color: #4338ca;
+  --dummy-header-bg: rgba(79, 70, 229, 0.08);
+  --dummy-row-bg: rgba(255, 255, 255, 0.7);
+  --dummy-row-border: rgba(79, 70, 229, 0.06);
+  --dummy-field-color: #1e40af;
+  --dummy-field-bg: rgba(59, 130, 246, 0.08);
+  --dummy-value-color: #0369a1;
+  --dummy-badge-color: #6d28d9;
+  --dummy-badge-bg: rgba(139, 92, 246, 0.08);
+  --dummy-badge-border: rgba(139, 92, 246, 0.2);
+
+  /* Steps panel overrides */
+  --steps-bg: rgba(15, 45, 89, 0.04);
+  --steps-border: rgba(15, 45, 89, 0.06);
 }
 
 /* Light Theme Overrides */
@@ -154,15 +200,7 @@ body.light-theme div[style*="rgba(0, 0, 0, 0.2)"] {
   background-color: rgba(15, 45, 89, 0.04) !important;
 }
 
-body.light-theme span[style*="#a5f3fc"] {
-  color: #0891b2 !important;
-}
-
-body.light-theme span[style*="#a5b4fc"] {
-  color: #4338ca !important;
-  background-color: rgba(99, 102, 241, 0.08) !important;
-  border-color: rgba(99, 102, 241, 0.2) !important;
-}
+/* Brittle hex-matching selectors removed in favor of semantic CSS variables */
 
 /* Pre/Code, terminal blocks, and mock browser frames in light mode */
 body.light-theme div[style*="#070913"],
